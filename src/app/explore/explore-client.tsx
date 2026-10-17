@@ -84,8 +84,18 @@ export function ExploreClient() {
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [openId, setOpenId] = useState(() => searchParams.get("open") ?? null);
-  const [category, setCategory] = useState<CategoryId | "all">("all");
-  const [topic, setTopic] = useState<TopicId | "all">("all");
+  const [category, setCategory] = useState<CategoryId | "all">(() => {
+    const value = searchParams.get("category");
+    return value && CATEGORIES.some((c) => c.id === value)
+      ? (value as CategoryId)
+      : "all";
+  });
+  const [topic, setTopic] = useState<TopicId | "all">(() => {
+    const value = searchParams.get("topic");
+    return value && Object.keys(TOPIC_NAMES).includes(value)
+      ? (value as TopicId)
+      : "all";
+  });
   const [source, setSource] = useState<string>("all");
   const [sort, setSort] = useState<SortKey>("newest");
   const [favoritesOnly, setFavoritesOnly] = useState(false);

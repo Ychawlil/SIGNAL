@@ -12,7 +12,7 @@ import { ItemDetail } from "@/components/items/item-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
-import { CATEGORY_MAP, CATEGORIES } from "@/lib/constants";
+import { CATEGORIES } from "@/lib/constants";
 import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import { categoryToTopics } from "@/lib/topics";
 import type {
@@ -176,14 +176,6 @@ export default function Home() {
   const topSection = sections.find((s) => s.key === "top");
   const signalOfDay = topSection?.items[0] ?? null;
 
-  const themes = Array.from(
-    new Set(
-      sections.flatMap((s) =>
-        s.items.map((item) => CATEGORY_MAP[item.category]?.shortLabel).filter(Boolean),
-      ),
-    ),
-  ) as string[];
-
   const distribution = CATEGORIES.map((cat) => ({
     id: cat.id,
     count: stats?.categoryCounts[cat.id] ?? 0,
@@ -233,14 +225,21 @@ export default function Home() {
       {!error && (
         <>
           <TodayIntelligence
+            digest={
+              briefing?.digest ??
+              "正在生成今日简报：导读、精选条数与重点主题会在真实数据加载完成后展示。"
+            }
             intro={
               briefing?.intro ??
-              "正在生成今日简报，请在 Settings 中确认数据源已同步。"
+              "正在从真实数据源加载简报…"
             }
-            todayCount={stats?.last24h ?? 0}
-            totalCount={stats?.total ?? 0}
             selectedCount={briefing?.count ?? 0}
-            themes={themes}
+            freshCount={stats?.last24h ?? 0}
+            windowCount={stats?.last7d ?? 0}
+            totalCount={stats?.total ?? 0}
+            themes={briefing?.keyThemes ?? []}
+            evidence={briefing?.evidence ?? { high: 0, medium: 0, low: 0 }}
+            reduced={briefing?.reduced ?? false}
           />
           <SignalOfDay item={signalOfDay} onOpen={setSelected} />
           <BriefingList sections={sections} onOpen={setSelected} />

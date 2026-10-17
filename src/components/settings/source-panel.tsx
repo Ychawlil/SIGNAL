@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CloudDownload, Database, RefreshCw } from "lucide-react";
+import { AlertTriangle, CloudDownload, Database, RefreshCw, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,29 @@ interface Overview {
   articles: { total: number; byProvider: Record<string, number> };
   providers: ProviderStatus[];
   recentErrors: { id: number; provider: ProviderId; message: string; createdAt: string }[];
+}
+
+interface GithubAuthInfo {
+  tokenConfigured: boolean;
+  tokenFormat: string;
+  tokenLength: number;
+  authenticated: boolean;
+  limit: number | null;
+  remaining: number | null;
+  resetAt: string | null;
+  searchLimit: number | null;
+  searchRemaining: number | null;
+  probedAt: string | null;
+  error: string | null;
+}
+
+function fetchGithubAuth(force = false): Promise<GithubAuthInfo> {
+  return fetch(`/api/intelligence/github-auth${force ? "?force=1" : ""}`, {
+    cache: "no-store",
+  }).then((response) => {
+    if (!response.ok) throw new Error(`GitHub auth probe failed (${response.status})`);
+    return response.json() as Promise<GithubAuthInfo>;
+  });
 }
 
 function fetchOverview(): Promise<Overview> {
@@ -53,6 +76,8 @@ export function SourcePanel() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<SyncSummary | null>(null);
+  const [githubAuth, setGithubAuth] = useState<GithubAuthInfo | null>(null);
+  const [probingAuth, setProbingAuth] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -68,10 +93,23 @@ export function SourcePanel() {
           setError(err instanceof Error ? err.message : String(err));
         }
       });
+    fetchGithubAuth()
+      .then((info) => {
+        if (active) setGithubAuth(info);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, []);
+
+  const refreshAuth = () => {
+    setProbingAuth(true);
+    fetchGithubAuth(true)
+      .then(setGithubAuth)
+      .catch(() => {})
+      .finally(() => setProbingAuth(false));
+  };
 
   const onSync = useCallback(async () => {
     setSyncing(true);
@@ -164,6 +202,68 @@ export function SourcePanel() {
               <Database className="h-4 w-4 text-muted-accent" />
               {overview.articles.total} articles stored
             </div>
+
+            {githubAuth && (
+              <div className="mt-3 rounded-md border border-border bg-panel-secondary p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-muted-accent" />
+                    <span className="text-sm font-medium text-foreground">
+                      GitHub 认证
+                    </span>
+                    <Badge
+                      className={cn(
+                        "font-mono uppercase tracking-wide",
+                        githubAuth.authenticated
+                          ? "bg-accent-soft text-accent"
+                          : githubAuth.tokenConfigured
+                            ? "bg-danger/15 text-danger"
+                            : "bg-warning-soft text-warning",
+                      )}
+                    >
+                      {githubAuth.authenticated
+                        ? "verified"
+                        : githubAuth.tokenConfigured
+                          ? "rejected"
+                          : "not configured"}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={refreshAuth}
+                    disabled={probingAuth}
+                  >
+                    <RefreshCw
+                      className={cn("h-3.5 w-3.5", probingAuth && "animate-spin")}
+                    />
+                    Re-check
+                  </Button>
+                </div>
+                <p className="mt-1 font-mono text-[11px] leading-5 text-muted-foreground">
+                  {githubAuth.tokenConfigured
+                    ? `token: ${githubAuth.tokenFormat} · ${githubAuth.tokenLength} chars（值不在前端展示）`
+                    : "服务端未读取到 GITHUB_TOKEN"}
+                </p>
+                <p className="font-mono text-[11px] leading-5 text-muted-foreground">
+                  {githubAuth.limit !== null
+                    ? `core 剩余 ${githubAuth.remaining ?? "?"}/${githubAuth.limit} · 重置 ${
+                        githubAuth.resetAt
+                          ? new Date(githubAuth.resetAt).toLocaleString()
+                          : "unknown"
+                      }`
+                    : "未取得 core 配额"}
+                  {githubAuth.searchLimit !== null
+                    ? ` · search 剩余 ${githubAuth.searchRemaining ?? "?"}/${githubAuth.searchLimit}`
+                    : ""}
+                </p>
+                {githubAuth.error && (
+                  <p className="mt-1 text-[11px] leading-5 text-danger">
+                    探测失败：{githubAuth.error}
+                  </p>
+                )}
+              </div>
+            )}
 
             <ul className="mt-3 flex flex-col gap-2">
               {overview.providers.map((provider) => (

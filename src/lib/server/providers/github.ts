@@ -1,10 +1,8 @@
-import { fetchWithRetry, RateLimiter } from "../http";
 import { getServerConfig } from "../env";
 import type { CategoryId } from "@/lib/types";
 import type { FetchContext, ProviderResult, RawArticle } from "../types";
 import { stripTags } from "./base";
-
-const GITHUB_API = "api.github.com";
+import { GithubApiError, describeToken, githubGetJson } from "../github-api";
 
 /** Topic-anchored searches for discovering new repositories. */
 const REPO_QUERIES = [
@@ -50,33 +48,6 @@ function dateString(iso: string | undefined, fallbackDays: number): string {
   return base.toISOString().slice(0, 10);
 }
 
-function buildHeaders(config: { githubToken?: string }): Record<string, string> {
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  if (config.githubToken) {
-    headers.Authorization = `Bearer ${config.githubToken}`;
-  }
-  return headers;
-}
-
-async function getJson(
-  path: string,
-  headers: Record<string, string>,
-  limiter: RateLimiter,
-  timeoutMs: number,
-): Promise<unknown> {
-  const response = await fetchWithRetry(`https://${GITHUB_API}${path}`, {
-    allowHosts: [GITHUB_API],
-    timeoutMs,
-    rateLimiter: limiter,
-    retries: 3,
-    headers,
-  });
-  return response.json();
-}
-
 function toIso(value: string | null | undefined): string {
   return value ?? new Date().toISOString();
 }
@@ -87,10 +58,9 @@ export const githubProvider = {
 
   async fetch(ctx: FetchContext): Promise<ProviderResult> {
     const config = getServerConfig();
-    const limiter = new RateLimiter(config.minRequestIntervalMs);
-    const headers = buildHeaders(config);
     const fetchedAt = new Date().toISOString();
     const articles: RawArticle[] = [];
+    const warnings: string[] = [];
     let itemsSeen = 0;
 
     const sinceDate = dateString(ctx.since, 14);
@@ -99,12 +69,31 @@ export const githubProvider = {
       const searchPath =
         `/search/repositories?q=${encodeURIComponent(`${query} created:>${sinceDate}`)}` +
         `&sort=stars&order=desc&per_page=5`;
-      const payload = (await getJson(
-        searchPath,
-        headers,
-        limiter,
-        config.requestTimeoutMs,
-      )) as { items?: Record<string, unknown>[] };
+
+      let payload: { items?: Record<string, unknown>[] };
+      try {
+        payload = await githubGetJson<{ items?: Record<string, unknown>[] }>(
+          searchPath,
+          { timeoutMs: config.requestTimeoutMs },
+        );
+      } catch (error) {
+        if (error instanceof GithubApiError) {
+          // A rate limit means the remaining queries will fail too — stop now
+          // and keep whatever was already collected.
+          if (
+            error.kind === "primary-rate-limit" ||
+            error.kind === "secondary-rate-limit" ||
+            error.kind === "auth-failed"
+          ) {
+            if (articles.length === 0) throw error;
+            warnings.push(`${query}: ${error.message}`);
+            break;
+          }
+          warnings.push(`${query}: ${error.message}`);
+          continue;
+        }
+        throw error;
+      }
 
       const items = payload.items ?? [];
       itemsSeen += items.length;
@@ -139,12 +128,21 @@ export const githubProvider = {
 
     for (const tracked of TRACKED_RELEASES) {
       const releasesPath = `/repos/${tracked.repo}/releases?per_page=3`;
-      const payload = (await getJson(
-        releasesPath,
-        headers,
-        limiter,
-        config.requestTimeoutMs,
-      )) as Record<string, unknown>[];
+      let payload: Record<string, unknown>[];
+      try {
+        payload = await githubGetJson<Record<string, unknown>[]>(releasesPath, {
+          timeoutMs: config.requestTimeoutMs,
+        });
+      } catch (error) {
+        if (error instanceof GithubApiError) {
+          warnings.push(`${tracked.repo}: ${error.message}`);
+          if (error.kind === "primary-rate-limit" || error.kind === "auth-failed") {
+            break;
+          }
+          continue;
+        }
+        throw error;
+      }
 
       const releases = Array.isArray(payload) ? payload : [];
       itemsSeen += releases.length;
@@ -170,23 +168,36 @@ export const githubProvider = {
       }
     }
 
+    if (articles.length === 0 && warnings.length > 0) {
+      throw new GithubApiError(
+        `GitHub collection failed: ${warnings[0]}`,
+        "network",
+        null,
+        null,
+      );
+    }
+
     return {
       articles,
       itemsSeen,
       truncated: false,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   },
 
   healthCheck() {
     const config = getServerConfig();
-    return config.githubToken
-      ? {
-          health: "ok" as const,
-          message: "GitHub API with authenticated rate limits.",
-        }
-      : {
-          health: "degraded" as const,
-          message: "Unauthenticated GitHub API (60 requests/hour). Set GITHUB_TOKEN to raise limits.",
-        };
+    const token = describeToken(config.githubToken);
+    if (!token.configured) {
+      return {
+        health: "degraded" as const,
+        message:
+          "GITHUB_TOKEN 未配置：匿名额度仅 60 次/小时（搜索 10 次/分钟），采集容易触发 403。",
+      };
+    }
+    return {
+      health: "ok" as const,
+      message: `已加载 GITHUB_TOKEN（${token.format}，${token.length} 字符）；认证后 core 5000 次/小时、search 30 次/分钟。`,
+    };
   },
 };

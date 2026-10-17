@@ -1,9 +1,11 @@
 import "server-only";
 import { getServerConfig } from "../env";
-import { fetchWithRetry, HttpError, RateLimiter } from "../http";
+import {
+  GithubApiError,
+  describeToken,
+  githubGetJson,
+} from "../github-api";
 import { insertSnapshot, upsertRepo, type GithubRepoRow } from "./store";
-
-const GITHUB_API = "api.github.com";
 
 /** Focus areas → GitHub topic searches (recently active, by stars). */
 const TOPIC_QUERIES: { topic: string; query: string }[] = [
@@ -24,29 +26,22 @@ function sinceDate(days: number): string {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 }
 
-function buildHeaders(config: { githubToken?: string }): Record<string, string> {
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  if (config.githubToken) headers.Authorization = `Bearer ${config.githubToken}`;
-  return headers;
-}
+/**
+ * `owner/repo` must keep its slash — encoding it as `%2F` makes the API
+ * answer 404. Validate the shape instead of escaping it.
+ */
+const REPO_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
-async function getJson(
-  path: string,
-  headers: Record<string, string>,
-  limiter: RateLimiter,
-  timeoutMs: number,
-): Promise<unknown> {
-  const response = await fetchWithRetry(`https://${GITHUB_API}${path}`, {
-    allowHosts: [GITHUB_API],
-    timeoutMs,
-    rateLimiter: limiter,
-    retries: 3,
-    headers,
-  });
-  return response.json();
+function repoPath(fullName: string): string {
+  if (!REPO_PATTERN.test(fullName)) {
+    throw new GithubApiError(
+      `Unexpected repository name: ${fullName.slice(0, 100)}`,
+      "forbidden",
+      null,
+      null,
+    );
+  }
+  return `/repos/${fullName}`;
 }
 
 export interface CollectSummary {
@@ -59,22 +54,40 @@ export interface CollectSummary {
 
 export async function collectGithubTrends(days = 30): Promise<CollectSummary> {
   const config = getServerConfig();
-  const limiter = new RateLimiter(config.minRequestIntervalMs);
-  const headers = buildHeaders(config);
   const fetchedAt = new Date().toISOString();
   const since = sinceDate(days);
 
   const seen = new Map<string, GithubRepoRow>();
+  const warnings: string[] = [];
   let searched = 0;
+  let rateLimited = false;
 
   for (const entry of TOPIC_QUERIES) {
+    if (rateLimited) break;
     const path =
       `/search/repositories?q=${encodeURIComponent(`${entry.query} pushed:>${since}`)}` +
       `&sort=stars&order=desc&per_page=10`;
-    const payload = (await getJson(path, headers, limiter, config.requestTimeoutMs)) as {
-      items?: Record<string, unknown>[];
-    };
-    searched += 1;
+
+    let payload: { items?: Record<string, unknown>[] };
+    try {
+      payload = await githubGetJson<{ items?: Record<string, unknown>[] }>(path, {
+        timeoutMs: config.requestTimeoutMs,
+      });
+      searched += 1;
+    } catch (error) {
+      if (error instanceof GithubApiError) {
+        warnings.push(`${entry.topic}: ${error.message}`);
+        if (
+          error.kind === "primary-rate-limit" ||
+          error.kind === "secondary-rate-limit" ||
+          error.kind === "auth-failed"
+        ) {
+          rateLimited = true;
+        }
+        continue;
+      }
+      throw error;
+    }
 
     for (const item of payload.items ?? []) {
       const fullName = String(item.full_name ?? "");
@@ -104,6 +117,15 @@ export async function collectGithubTrends(days = 30): Promise<CollectSummary> {
   }
 
   const repos = [...seen.values()];
+  if (repos.length === 0 && warnings.length > 0) {
+    throw new GithubApiError(
+      `GitHub trend collection failed: ${warnings[0]}`,
+      "network",
+      null,
+      null,
+    );
+  }
+
   for (const repo of repos) {
     upsertRepo(repo);
     insertSnapshot({
@@ -123,28 +145,25 @@ export async function collectGithubTrends(days = 30): Promise<CollectSummary> {
     let hasReleases: boolean | null = null;
 
     try {
-      await getJson(
-        `/repos/${encodeURIComponent(repo.fullName)}/readme`,
-        headers,
-        limiter,
-        config.requestTimeoutMs,
-      );
+      await githubGetJson(`${repoPath(repo.fullName)}/readme`, {
+        timeoutMs: config.requestTimeoutMs,
+      });
       hasReadme = true;
     } catch (error) {
-      if (error instanceof HttpError && error.status === 404) hasReadme = false;
+      if (error instanceof GithubApiError && error.kind === "not-found") hasReadme = false;
+      else if (error instanceof GithubApiError) warnings.push(`${repo.fullName} readme: ${error.message}`);
       else throw error;
     }
 
     try {
-      const releases = (await getJson(
-        `/repos/${encodeURIComponent(repo.fullName)}/releases?per_page=1`,
-        headers,
-        limiter,
-        config.requestTimeoutMs,
-      )) as unknown[];
+      const releases = await githubGetJson<unknown[]>(
+        `${repoPath(repo.fullName)}/releases?per_page=1`,
+        { timeoutMs: config.requestTimeoutMs },
+      );
       hasReleases = Array.isArray(releases) && releases.length > 0;
     } catch (error) {
-      if (error instanceof HttpError && error.status === 404) hasReleases = false;
+      if (error instanceof GithubApiError && error.kind === "not-found") hasReleases = false;
+      else if (error instanceof GithubApiError) warnings.push(`${repo.fullName} releases: ${error.message}`);
       else throw error;
     }
 
@@ -152,14 +171,17 @@ export async function collectGithubTrends(days = 30): Promise<CollectSummary> {
     detailedRepos += 1;
   }
 
+  const auth = describeToken(config.githubToken);
   return {
     searched,
     reposDiscovered: repos.length,
     snapshotsTaken: repos.length,
     detailedRepos,
-    note:
-      config.githubToken
-        ? "GitHub API (authenticated)."
-        : "GitHub API unauthenticated: search 10 req/min, core 60 req/hour.",
+    note: [
+      auth.configured
+        ? `GitHub API（已认证，${auth.format}）`
+        : "GitHub API 未认证：search 10 次/分钟、core 60 次/小时",
+      warnings.length > 0 ? `；${warnings.length} 个请求未成功：${warnings[0]}` : "",
+    ].join(""),
   };
 }

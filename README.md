@@ -101,7 +101,7 @@ Settings and Trends.
 
 | Variable | Purpose |
 |---|---|
-| `GITHUB_TOKEN` | Higher GitHub API rate limits |
+| `GITHUB_TOKEN` | Higher GitHub API rate limits (60 → 5000/h); verify it via Settings → GitHub 认证 |
 | `LLM_ANALYZER_API_KEY` | Enable LLM-based analysis |
 | `LLM_ANALYZER_BASE_URL` | OpenAI-compatible API endpoint |
 | `LLM_ANALYZER_MODEL` | Analysis model |

@@ -129,7 +129,11 @@ export function getDailyBriefing(options: { force?: boolean } = {}): DailyBriefi
   const date = new Date().toISOString().slice(0, 10);
   if (!options.force) {
     const cached = getBriefing(date);
-    if (cached) return cached;
+    // Older payloads predate section A fields — regenerate instead of
+    // serving a partially empty overview.
+    if (cached && Array.isArray(cached.keyThemes) && typeof cached.digest === "string") {
+      return cached;
+    }
   }
 
   const { items } = listAnalyses({ page: 1, pageSize: 300 });

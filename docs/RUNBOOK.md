@@ -39,7 +39,7 @@ npm run build      # Next.js 生产构建（已通过）
 
 | 变量 | 必填 | 说明 |
 | ---- | ---- | ---- |
-| `GITHUB_TOKEN` | 否 | 提升 GitHub API 限额（60→5000 次/小时）。 |
+| `GITHUB_TOKEN` | 否 | 提升 GitHub API 限额（60→5000 次/小时）。设置后可在设置页「GitHub 认证」中验证是否生效；Token 只读自服务端，不会返回前端或写入日志。 |
 | `RSS_FEEDS` | 否 | 逗号分隔的 RSS/Atom 订阅源；缺省时 RSS 源 unconfigured。 |
 | `ARXIV_RSS_CATEGORIES` | 否 | arXiv 每日公告 RSS 分类，默认 `cs.AI,cs.LG,cs.RO,cs.CL,cs.SE`。 |
 | `SIGNAL_DISABLED_PROVIDERS` | 否 | 暂停自动采集的来源（`arxiv`/`arxiv-rss`/`github`/`rss`/`hackernews`）。暂停后不发请求、保留历史数据。 |
@@ -79,7 +79,7 @@ npm run build      # Next.js 生产构建（已通过）
 | ---- | ---- | ---- |
 | arXiv RSS（rss.arxiv.org） | 与 legacy API 共享限流；单分类 feed 可达 ~1MB、冷缓存约 60s | 串行 + ≥3s 间隔 + 90s 超时；逐分类容错；默认 5 个分类 |
 | arXiv 导出 API | 官方条款要求「每 3 秒最多 1 次请求、单连接」；本机 IP 实测长期返回 429/503 | 当前已通过 `SIGNAL_DISABLED_PROVIDERS` 暂停；历史 50 条保留 |
-| GitHub | 未认证 core 60/h、search 10/min；实测触发 403 | 当前已暂停采集；历史 45 条文章与 73 仓库/219 快照保留，趋势页标注暂停与采样时间 |
+| GitHub | 已认证后 core 5000/h、search 30/min；未认证仅 60/h、10/min（实测 403 即源于此） | 统一 `githubGetJson` 客户端：串行 + ≥1s 间隔；主限流不重试、次限流按 `retry-after` 最多重试 1 次；错误分类并脱敏 |
 | Hacker News | Algolia API，免费且较宽松 | 有限重试；失败保留上次数据 |
 | RSS 媒体源 | 各站点反爬/限流；单个源失败不影响其他源 | 逐源容错、每源只取最近 30 条、SSRF 校验 |
 | LLM | 可选付费；本仓库未配置密钥，未实际调用过 | 缺省用免费规则引擎 |

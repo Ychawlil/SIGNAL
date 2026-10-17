@@ -120,6 +120,20 @@ export interface BriefingSection {
   items: BriefingItem[];
 }
 
+export interface BriefingTheme {
+  label: string;
+  /** Topic id when the theme maps to a tracked topic (enables Explore filtering). */
+  topic: string | null;
+  category: string | null;
+  count: number;
+}
+
+export interface BriefingEvidenceSummary {
+  high: number;
+  medium: number;
+  low: number;
+}
+
 export interface DailyBriefing {
   date: string;
   generatedAt: string;
@@ -128,6 +142,14 @@ export interface DailyBriefing {
   sections: BriefingSection[];
   /** True when quality content was scarce and fewer items were returned. */
   reduced: boolean;
+  /** Ranked key themes across the selected items (section A). */
+  keyThemes: BriefingTheme[];
+  /** Short editorial digest built from the selected items (section A). */
+  digest: string;
+  /** Confidence split of the selected items (section A). */
+  evidence: BriefingEvidenceSummary;
+  /** Coverage window actually used for selection. */
+  window: { freshHours: number; backfillDays: number };
 }
 
 /** Pluggable analysis engine (rule-based now, LLM later). */
