@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   const run = await runTask("sync", "manual", syncJob, { retries: 1 });
   if (run.status === "success") {
-    return NextResponse.json(run.result ?? { runs: [], totalNew: 0 });
+    return NextResponse.json(run.result ?? { runs: [], totalNew: 0, totalSkipped: 0 });
   }
   if (run.status === "skipped") {
     return NextResponse.json({ error: run.skippedReason }, { status: 409 });

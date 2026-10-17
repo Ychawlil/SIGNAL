@@ -42,4 +42,13 @@ describe("SSRF / URL guard", () => {
       "https://a.com/p?q=1",
     );
   });
+
+  it("treats arXiv versions and PDF links as one paper", () => {
+    expect(canonicalizeUrl("https://arxiv.org/abs/2610.22341v1")).toBe(
+      "https://arxiv.org/abs/2610.22341",
+    );
+    expect(canonicalizeUrl("https://arxiv.org/pdf/2610.22341v2.pdf")).toBe(
+      "https://arxiv.org/abs/2610.22341",
+    );
+  });
 });

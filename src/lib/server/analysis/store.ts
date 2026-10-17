@@ -145,6 +145,32 @@ export function listAnalyses(options: {
   };
 }
 
+/**
+ * Every analyzed article published at or after `sinceIso`.
+ *
+ * The briefing needs the full freshness window, not a capped page: a fixed
+ * top-100 slice silently hides newer items once enough high-scoring history
+ * exists, so a manual refresh would appear to do nothing.
+ */
+export function listAnalysesSince(sinceIso: string): AnalyzedArticleRow[] {
+  const database = getDb();
+  const rows = database
+    .prepare(
+      `SELECT a.*, an.one_liner, an.key_change, an.differences, an.evidence,
+              an.limitations, an.impact, an.personal_relevance, an.further_reading,
+              an.importance_score, an.importance_factors, an.confidence_score,
+              an.confidence_factors, an.confidence_level, an.evidence_basis,
+              an.is_model_release, an.model_family, an.analyzed_at
+       FROM analyses an
+       JOIN articles a ON a.id = an.article_id
+       WHERE a.published_at >= ?
+       ORDER BY an.importance_score DESC, a.published_at DESC`,
+    )
+    .all(sinceIso) as Record<string, unknown>[];
+
+  return rows.map(rowToAnalyzedArticle);
+}
+
 function rowToAnalyzedArticle(row: Record<string, unknown>): AnalyzedArticleRow {
   return {
     id: Number(row.id),

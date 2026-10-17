@@ -58,11 +58,23 @@ function freshnessBonus(publishedAt: string, now: Date): number {
   return 0;
 }
 
+/**
+ * Stable identity for "the same story". arXiv serves one paper as both
+ * `/abs/<id>` and `/abs/<id>vN`, so the two providers produce distinct rows
+ * and URLs but an identical title; deduplicating on the normalized title
+ * keeps a refresh from listing (or double-counting) the same signal twice.
+ */
+function identityKey(article: AnalyzedArticleRow): string {
+  const title = article.title.toLowerCase().replace(/\s+/g, " ").trim();
+  return title || article.url.toLowerCase();
+}
+
 export function generateBriefing(
   articles: AnalyzedArticleRow[],
   now = new Date(),
 ): DailyBriefing {
   const cutoff = now.getTime() - 7 * 86400000;
+  const seen = new Set<string>();
 
   const candidates = articles
     .filter((article) => {
@@ -81,7 +93,13 @@ export function generateBriefing(
         freshnessBonus(article.publishedAt, now),
     }))
     .filter((c) => c.section !== null)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score)
+    .filter((c) => {
+      const key = identityKey(c.article);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
   const used = new Set<number>();
   const sections: BriefingSection[] = [];

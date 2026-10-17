@@ -6,7 +6,7 @@ import { extractModelInfo } from "./model-extractor";
 import {
   countAnalyzed,
   getBriefing,
-  listAnalyses,
+  listAnalysesSince,
   listModelFamilies,
   listUnanalyzedArticleIds,
   saveAnalysis,
@@ -126,7 +126,8 @@ export function getModelRegistry(): ModelFamily[] {
 }
 
 export function getDailyBriefing(options: { force?: boolean } = {}): DailyBriefing {
-  const date = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
   if (!options.force) {
     const cached = getBriefing(date);
     // Older payloads predate section A fields — regenerate instead of
@@ -136,8 +137,11 @@ export function getDailyBriefing(options: { force?: boolean } = {}): DailyBriefi
     }
   }
 
-  const { items } = listAnalyses({ page: 1, pageSize: 300 });
-  const briefing = generateBriefing(items);
+  // One extra day of slack so the SQL pre-filter can never drop an item that
+  // generateBriefing would still consider at the 7-day boundary.
+  const since = new Date(now.getTime() - 8 * 86400000).toISOString();
+  const items = listAnalysesSince(since);
+  const briefing = generateBriefing(items, now);
   const articleIds = briefing.sections.flatMap((s) => s.items.map((i) => i.articleId));
   saveBriefing(date, briefing, articleIds);
   return briefing;

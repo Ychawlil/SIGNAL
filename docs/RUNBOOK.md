@@ -57,6 +57,9 @@ npm run build      # Next.js 生产构建（已通过）
   随 `next start` / `next dev` 启动，无需额外进程。
 - 开启方式：`SIGNAL_SCHEDULER_ENABLED=true`。每个周期顺序执行
   `sync → analyze → briefing → trends`，每步独立加锁、幂等、写执行记录。
+- 手动更新：Daily Briefing 页右上角「手动更新」调用 `POST /api/briefing/refresh`，
+  依次执行 sync → analyze → 强制重建简报；复用同一套租约锁与唯一约束，重复点击
+  不会产生重复文章或重复简报条目。即使某个来源失败，也会用已入库数据重建简报。
 - **并发保护**：`task_locks` 表做租约锁；instrumentation 在多个 worker 中运行时，
   通过「owner 租约」保证同一时刻只有一个 worker 执行周期（已实测：clean boot 下
   单周期只触发一次，冲突时第二个 run 记为 `skipped`，不重复写入）。
@@ -86,7 +89,7 @@ npm run build      # Next.js 生产构建（已通过）
 
 ## 7. 尚未接入或无法保证稳定运行的功能
 
-- **LLM 分析引擎**：接口已实现但未配置密钥、未实际调用验证（默认走规则引擎）。
+- **LLM 分析引擎**：已接入 DeepSeek 官方 API（`https://api.deepseek.com`，模型 `deepseek-flash`），并用真实文章提示词验证返回合法 JSON；第三方 API 的配额、费用和输出截断仍需持续观察，异常时自动回退规则引擎。
 - **Star 增长趋势（Momentum）**：需要多次历史快照（≥2 次且跨足够时长），
   首次采集后必然显示 unknown——这是预期行为，不是故障。
 - **Docker/多实例部署**：未提供、未验证；当前验证的是单机 `npm run build && start`。
@@ -96,7 +99,7 @@ npm run build      # Next.js 生产构建（已通过）
 - 所有外部抓取经 `url-guard.ts`：仅 http/https、拒绝内网/保留 IP、DNS 解析校验、
   禁止重定向、拒绝内嵌凭据；外部文本一律作为不可信输入，React 默认转义渲染
   （全项目未使用 `dangerouslySetInnerHTML`）。
-- 手动更新/后台端点（sync、analysis/run、trends/collect、tasks/run）经
+- 手动更新/后台端点（sync、briefing/refresh、analysis/run、trends/collect、tasks/run）经
   `auth.ts` 守卫：跨域 `Origin` 拒绝，可选用 `SIGNAL_ADMIN_TOKEN`。
 - 生产依赖 `npm audit --omit=dev`：**0 漏洞**。
 

@@ -37,6 +37,7 @@ export async function runSync(
 
   const runs: SyncSummary["runs"] = [];
   let totalNew = 0;
+  let totalSkipped = 0;
 
   for (const provider of targets) {
     const run = startRun(provider.id);
@@ -85,6 +86,7 @@ export async function runSync(
 
       const { inserted, skipped } = insertArticles(result.articles);
       totalNew += inserted;
+      totalSkipped += skipped;
 
       // Non-fatal warnings (e.g. a later arXiv page failed) are logged
       // without discarding the pages that did arrive.
@@ -150,7 +152,13 @@ export async function runSync(
     }
   }
 
-  return { startedAt, finishedAt: new Date().toISOString(), runs, totalNew };
+  return {
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    runs,
+    totalNew,
+    totalSkipped,
+  };
 }
 
 export function getProviderStatuses(): ProviderStatus[] {

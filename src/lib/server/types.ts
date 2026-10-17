@@ -114,4 +114,6 @@ export interface SyncSummary {
     message: string | null;
   }[];
   totalNew: number;
+  /** Duplicate rows ignored by the unique constraints during this run. */
+  totalSkipped: number;
 }

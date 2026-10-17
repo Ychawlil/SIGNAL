@@ -32,8 +32,8 @@ It goes beyond headlines to help you understand **what changed, why it matters, 
 
 | Feature | Status |
 |---|---|
-| Daily intelligence briefing | Available |
-| AI-powered article analysis | Available; rule-based by default |
+| Daily intelligence briefing | Available; manual refresh from the page |
+| AI-powered article analysis | Available; DeepSeek-compatible LLM with rule-based fallback |
 | Personal library, notes & collections | Available |
 | Topic subscriptions & weekly review | Available |
 | GitHub trend tracking | Available |

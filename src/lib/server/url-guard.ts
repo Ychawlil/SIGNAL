@@ -140,6 +140,15 @@ export function canonicalizeUrl(raw: string): string {
     if ((url.pathname === "" || url.pathname === "/") && url.search === "") {
       url.pathname = "/";
     }
+    // The arXiv API and its daily RSS feed expose the same paper as different
+    // URLs (/abs/<id>, /abs/<id>vN, /pdf/<id>). Normalizing them here stops
+    // the two providers from inserting duplicate rows for one paper.
+    if (url.hostname === "arxiv.org" || url.hostname.endsWith(".arxiv.org")) {
+      const match = /^\/(?:abs|pdf)\/((?:[^/]+\/)?[^/]+?)(?:v\d+)?(?:\.pdf)?$/.exec(
+        url.pathname,
+      );
+      if (match) url.pathname = `/abs/${match[1]}`;
+    }
     return url.toString();
   } catch {
     return raw;

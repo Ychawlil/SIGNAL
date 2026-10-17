@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { BriefingList, type BriefingSectionView } from "@/components/briefing/briefing-list";
 import { SignalOfDay } from "@/components/briefing/signal-of-day";
@@ -102,6 +102,38 @@ interface HomeData {
   trends: TrendsReport;
 }
 
+interface RefreshResponse {
+  sync: {
+    status: "running" | "success" | "error" | "skipped";
+    totalNew: number;
+    totalSkipped: number;
+    error: string | null;
+  };
+  analyze: {
+    status: "running" | "success" | "error" | "skipped";
+    analyzed: number;
+    error: string | null;
+  };
+  briefing: { date: string; generatedAt: string; count: number };
+}
+
+/** Never render the same story twice, even if the payload contains duplicates. */
+function dedupeSections(sections: BriefingSectionView[]): BriefingSectionView[] {
+  const seen = new Set<string>();
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        const key =
+          item.title.toLowerCase().replace(/\s+/g, " ").trim() || item.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 async function fetchHomeData(): Promise<HomeData> {
   const [briefing, signalsData, stats, trends] = await Promise.all([
     fetchJson<DailyBriefing>("/api/briefing"),
@@ -125,6 +157,11 @@ export default function Home() {
   const [trends, setTrends] = useState<TrendsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateNotice, setUpdateNotice] = useState<{
+    tone: "success" | "warning";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -165,13 +202,81 @@ export default function Home() {
       .finally(() => setLoading(false));
   };
 
+  const manualUpdate = useCallback(async () => {
+    setUpdating(true);
+    setUpdateNotice(null);
+    try {
+      const response = await fetch("/api/briefing/refresh", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const summary = (await response.json().catch(() => ({}))) as Partial<RefreshResponse> & {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(summary.error ?? `更新失败 (${response.status})`);
+      }
+
+      const data = await fetchHomeData();
+      setBriefing(data.briefing);
+      setSignals(data.signals);
+      setStats(data.stats);
+      setTrends(data.trends);
+      setError(null);
+
+      const problems: string[] = [];
+      if (summary.sync?.status === "error") {
+        problems.push(`采集失败：${summary.sync.error ?? "未知错误"}`);
+      } else if (summary.sync?.status === "skipped") {
+        problems.push("另一个更新任务正在运行，本次未重新采集");
+      }
+      if (summary.analyze?.status === "error") {
+        problems.push(`分析失败：${summary.analyze.error ?? "未知错误"}`);
+      } else if (summary.analyze?.status === "skipped") {
+        problems.push("另一个分析任务正在运行，本次未重新分析");
+      }
+
+      if (problems.length > 0) {
+        setUpdateNotice({
+          tone: "warning",
+          message: `简报已刷新，但部分步骤未完成：${problems.join("；")}`,
+        });
+        return;
+      }
+
+      const parts = [`已刷新今日简报（${data.briefing.count} 条精选）`];
+      parts.push(
+        summary.sync && summary.sync.totalNew > 0
+          ? `新增 ${summary.sync.totalNew} 条情报`
+          : "没有新的情报",
+      );
+      if (summary.sync && summary.sync.totalSkipped > 0) {
+        parts.push(`跳过 ${summary.sync.totalSkipped} 条重复内容`);
+      }
+      if (summary.analyze && summary.analyze.analyzed > 0) {
+        parts.push(`新分析 ${summary.analyze.analyzed} 条`);
+      }
+      setUpdateNotice({ tone: "success", message: parts.join(" · ") });
+    } catch (err) {
+      setUpdateNotice({
+        tone: "warning",
+        message: `更新失败：${err instanceof Error ? err.message : String(err)}`,
+      });
+    } finally {
+      setUpdating(false);
+    }
+  }, []);
+
   const signalById = new Map(signals.map((s) => [Number(s.id), s]));
 
-  const sections: BriefingSectionView[] = (briefing?.sections ?? []).map((section) => ({
-    key: section.key,
-    title: section.title,
-    items: section.items.map((item) => signalById.get(item.articleId) ?? fromBriefingItem(item)),
-  }));
+  const sections: BriefingSectionView[] = dedupeSections(
+    (briefing?.sections ?? []).map((section) => ({
+      key: section.key,
+      title: section.title,
+      items: section.items.map((item) => signalById.get(item.articleId) ?? fromBriefingItem(item)),
+    })),
+  );
 
   const topSection = sections.find((s) => s.key === "top");
   const signalOfDay = topSection?.items[0] ?? null;
@@ -196,12 +301,25 @@ export default function Home() {
               Daily Briefing
             </h1>
           </div>
-          {briefing && (
-            <Badge variant="accent" className="gap-1.5 px-2 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground/80" />
-              {briefing.count} item{briefing.count === 1 ? "" : "s"}
-            </Badge>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {briefing && (
+              <Badge variant="accent" className="gap-1.5 px-2 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground/80" />
+                {briefing.count} item{briefing.count === 1 ? "" : "s"}
+              </Badge>
+            )}
+            <Button
+              variant="primary"
+              size="md"
+              onClick={manualUpdate}
+              disabled={updating}
+              aria-busy={updating}
+              title="立即采集新情报，并刷新今日简报与 Today's Intelligence"
+            >
+              <RefreshCw className={updating ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+              {updating ? "更新中…" : "手动更新"}
+            </Button>
+          </div>
         </div>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
           {briefing
@@ -209,6 +327,19 @@ export default function Home() {
             : "正在从真实数据源加载简报…"}
         </p>
       </header>
+
+      {updateNotice && (
+        <div
+          className={
+            updateNotice.tone === "success"
+              ? "rounded-lg border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent"
+              : "rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-warning"
+          }
+          role="status"
+        >
+          {updateNotice.message}
+        </div>
+      )}
 
       {error && (
         <div className="flex flex-col items-start gap-3 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3">

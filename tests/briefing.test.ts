@@ -71,6 +71,22 @@ describe("daily briefing generation", () => {
     expect(briefing.count).toBeLessThan(3);
   });
 
+  it("deduplicates the same story fetched from two providers", () => {
+    const first = row(1, "ai-models", 90, "2026-10-17T00:00:00Z");
+    const duplicate = {
+      ...row(2, "ai-models", 89, "2026-10-17T01:00:00Z"),
+      title: first.title,
+      url: "https://arxiv.org/abs/2v1",
+    };
+    const briefing = generateBriefing(
+      [first, duplicate],
+      new Date("2026-10-17T12:00:00Z"),
+    );
+    const ids = briefing.sections.flatMap((s) => s.items.map((i) => i.articleId));
+    expect(ids).toEqual([1]);
+    expect(briefing.count).toBe(1);
+  });
+
   it("excludes items below the importance threshold", () => {
     const articles = [
       row(1, "physical-ai", 80, "2026-10-17T00:00:00Z"),
