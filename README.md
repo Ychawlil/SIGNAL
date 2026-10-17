@@ -11,9 +11,9 @@ It goes beyond headlines to help you understand **what changed, why it matters, 
 中文简介：SIGNAL 是一个个人 AI 与前沿科技情报工作台，聚焦 AI 模型、数学与计算机科学、具身智能、科研突破，以及 GitHub 上的新兴技术趋势。
 ## ✦ Screenshots
 
-![Trends & Intelligence](trends.png)
+![Trends & Intelligence](screenshots/trends.png)
 
-![Research Library](library.png)
+![Research Library](screenshots/library.png)
 
 ---
 
