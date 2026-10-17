@@ -212,7 +212,11 @@ function scoreImportance(article: StoredArticle): {
   );
 
   const impact = clampScore(
-    (article.provider === "github" ? 12 : article.provider === "arxiv" ? 11 : 7) +
+    (article.provider === "github"
+      ? 12
+      : article.provider === "arxiv" || article.provider === "arxiv-rss"
+        ? 11
+        : 7) +
       ((article.metrics?.stars ?? 0) >= 1000 ? 4 : (article.metrics?.stars ?? 0) >= 100 ? 2 : 0) +
       (containsAny(text, ["breakthrough", "significant", "state-of-the-art", "first"]) ? 3 : 0),
     0,
@@ -251,9 +255,11 @@ function scoreConfidence(article: StoredArticle): {
       ? 28
       : article.provider === "arxiv"
         ? 18
-        : article.provider === "rss"
-          ? 12
-          : 6;
+        : article.provider === "arxiv-rss"
+          ? 17
+          : article.provider === "rss"
+            ? 12
+            : 6;
 
   const methodTransparency = clampScore(
     (article.summary.length > 200 ? 10 : 4) +

@@ -28,6 +28,12 @@ const RELEVANT_LANGUAGES = [
   "go",
 ];
 
+/**
+ * Minimum observation span for a momentum (growth-rate) figure. Anything
+ * shorter is sampling jitter, not a trend, and must not be reported as growth.
+ */
+export const MIN_MOMENTUM_SPAN_DAYS = 1;
+
 export function popularityScore(stars: number): number {
   if (stars <= 0) return 0;
   return Math.min(100, Math.round(20 * Math.log10(stars + 1)));
@@ -58,8 +64,7 @@ export function technicalMeritScore(repo: GithubRepoRow): number {
   return Math.min(100, score);
 }
 
-export function evidenceQualityScore(repo: GithubRepoRow): number {
-  let score = 0;
+export function evidenceQualityScore(repo: GithubRepoRow): number {  let score = 0;
   if (repo.hasReadme === true) score += 30;
   if (repo.license) score += 20;
   if (repo.hasReleases === true) score += 20;
@@ -91,14 +96,15 @@ export function momentumDetail(
   const spanDays = spanMs / 86400000;
   const growthStars = last.stars - first.stars;
 
-  if (spanDays < 1 / 24) {
+  // Below one day the "growth" is noise from sampling jitter, not a trend.
+  if (spanDays < MIN_MOMENTUM_SPAN_DAYS) {
     return {
       available: false,
       snapshots: sorted.length,
       spanDays,
       growthStars,
       ratePerDay: null,
-      note: "快照间隔过短，暂不计算增长率。",
+      note: `快照跨度仅 ${(spanDays * 24).toFixed(1)} 小时，不足以判断增长趋势（需 ≥${MIN_MOMENTUM_SPAN_DAYS * 24} 小时）。`,
     };
   }
 

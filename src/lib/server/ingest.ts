@@ -14,6 +14,7 @@ import {
 } from "./db";
 import { PROVIDERS } from "./providers";
 import { ProviderUnavailableError } from "./providers/base";
+import { isProviderEnabled } from "./env";
 import type {
   IntelligenceProvider,
   ProviderId,
@@ -38,8 +39,25 @@ export async function runSync(
   let totalNew = 0;
 
   for (const provider of targets) {
-    const health = provider.healthCheck();
     const run = startRun(provider.id);
+
+    // Paused sources keep their historical rows but make no outbound request.
+    if (!isProviderEnabled(provider.id)) {
+      const message =
+        "自动采集已暂停（SIGNAL_DISABLED_PROVIDERS）。历史数据保留，不做任何请求。";
+      finishRun(run, { status: "disabled", errorMessage: null });
+      runs.push({
+        provider: provider.id,
+        name: provider.name,
+        status: "disabled",
+        itemsSeen: 0,
+        itemsNew: 0,
+        message,
+      });
+      continue;
+    }
+
+    const health = provider.healthCheck();
 
     if (health.health === "unconfigured") {
       finishRun(run, {
@@ -68,11 +86,18 @@ export async function runSync(
       const { inserted, skipped } = insertArticles(result.articles);
       totalNew += inserted;
 
+      // Non-fatal warnings (e.g. a later arXiv page failed) are logged
+      // without discarding the pages that did arrive.
+      for (const warning of result.warnings ?? []) {
+        recordError(provider.id, run.id, warning);
+      }
+
       const syncTime = new Date().toISOString();
       saveProviderState(provider.id, {
         etag: result.etag,
         cursor: result.cursor,
-        since: syncTime,
+        // Providers may roll the watermark back when they could not finish.
+        since: result.nextSince ?? syncTime,
       });
 
       finishRun(run, {
@@ -129,29 +154,41 @@ export async function runSync(
 }
 
 export function getProviderStatuses(): ProviderStatus[] {
+  const counts = articleCounts().byProvider;
+
   return PROVIDERS.map((provider) => {
+    const enabled = isProviderEnabled(provider.id);
     const health = provider.healthCheck();
     const last = latestRun(provider.id);
     const lastSuccess = latestSuccessRun(provider.id);
     const error = latestError(provider.id);
 
+    // A paused source is reported as disabled regardless of the last run.
     // A provider that just failed shows "error"; otherwise use health.
-    const effectiveHealth =
-      last?.status === "error" ? "error" : health.health;
+    const effectiveHealth = !enabled
+      ? "disabled"
+      : last?.status === "error"
+        ? "error"
+        : health.health;
+
+    const message = !enabled
+      ? "自动采集已暂停；历史数据仍可查看，不做任何请求。"
+      : effectiveHealth === "error" && error
+        ? error
+        : health.message;
 
     return {
       id: provider.id,
       name: provider.name,
       health: effectiveHealth,
-      message:
-        effectiveHealth === "error" && error
-          ? error
-          : health.message,
+      message,
+      enabled,
       lastRunAt: last?.startedAt ?? null,
       lastSuccessAt: lastSuccess?.finishedAt ?? null,
       lastItemsSeen: lastSuccess?.itemsSeen ?? null,
       lastItemsNew: lastSuccess?.itemsNew ?? null,
       lastError: error,
+      storedArticles: counts[provider.id] ?? 0,
     };
   });
 }

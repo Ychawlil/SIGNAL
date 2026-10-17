@@ -3,7 +3,7 @@
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
 import { FavoriteButton } from "./favorite-button";
-import { CategoryBadge, ConfidenceBadge, ImportanceMeter, MockTag } from "./meta";
+import { CategoryBadge, ConfidenceBadge, ImportanceMeter } from "./meta";
 import { useLibrary } from "@/components/providers";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,6 @@ export function ItemRow({ item, onOpen, showImportance = true }: ItemRowProps) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <CategoryBadge category={item.category} />
-            {item.isMock && <MockTag />}
             <span className="text-muted-foreground">
               {item.sourceName} · <TimeAgo iso={item.publishedAt} />
             </span>

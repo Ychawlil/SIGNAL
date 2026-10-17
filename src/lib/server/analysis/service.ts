@@ -125,10 +125,12 @@ export function getModelRegistry(): ModelFamily[] {
   return listModelFamilies();
 }
 
-export function getDailyBriefing(): DailyBriefing {
+export function getDailyBriefing(options: { force?: boolean } = {}): DailyBriefing {
   const date = new Date().toISOString().slice(0, 10);
-  const cached = getBriefing(date);
-  if (cached) return cached;
+  if (!options.force) {
+    const cached = getBriefing(date);
+    if (cached) return cached;
+  }
 
   const { items } = listAnalyses({ page: 1, pageSize: 300 });
   const briefing = generateBriefing(items);

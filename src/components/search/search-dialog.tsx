@@ -13,7 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { CATEGORY_MAP } from "@/lib/constants";
-import { INTELLIGENCE_ITEMS } from "@/lib/mock-data";
+import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
 import { ConfidenceBadge, ImportanceMeter } from "@/components/items/meta";
@@ -52,24 +52,6 @@ export function useSearch(): SearchContextValue {
   return ctx;
 }
 
-function searchItems(query: string): IntelligenceItem[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return INTELLIGENCE_ITEMS.filter((item) => {
-    const haystack = [
-      item.title,
-      item.summary,
-      item.keyChange,
-      item.sourceName,
-      CATEGORY_MAP[item.category]?.label ?? "",
-      ...item.tags,
-    ]
-      .join(" ")
-      .toLowerCase();
-    return q.split(/\s+/).every((token) => haystack.includes(token));
-  }).slice(0, 8);
-}
-
 function SearchDialog({
   open,
   onClose,
@@ -78,10 +60,38 @@ function SearchDialog({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<IntelligenceItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const results = useMemo(() => searchItems(query), [query]);
+  const onQueryChange = (value: string) => {
+    setQuery(value);
+    if (!value.trim()) {
+      setResults([]);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+  };
+
+  // Debounced search against the real intelligence database.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) return;
+    const timer = setTimeout(() => {
+      fetch(`/api/signals?pageSize=8&q=${encodeURIComponent(q)}`, {
+        cache: "no-store",
+      })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((data: { items: SignalRecord[] }) => {
+          setResults(data.items.map(toIntelligenceItem));
+        })
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false));
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const handleClose = useCallback(() => {
     setQuery("");
@@ -126,7 +136,7 @@ function SearchDialog({
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => onQueryChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") goToExplore();
             }}
@@ -141,7 +151,11 @@ function SearchDialog({
         <div className="max-h-[50vh] overflow-y-auto p-2">
           {query.trim() === "" ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              输入关键词，在全部示例情报中检索。
+              输入关键词，在已采集的真实情报中检索。
+            </p>
+          ) : loading ? (
+            <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+              检索中…
             </p>
           ) : results.length === 0 ? (
             <div className="p-2">

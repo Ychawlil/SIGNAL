@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "../db";
+import { isProviderEnabled } from "../env";
 import {
   computeRepoMetrics,
   compositeScore,
@@ -170,7 +171,7 @@ function buildReleases(): ReleaseSignal[] {
 
 function buildResearcherSignals(rangeDays: number): ResearcherSignal[] {
   const since = new Date(Date.now() - rangeDays * 86400000).toISOString();
-  return listArticles("WHERE a.provider = 'arxiv' AND a.published_at >= ?", [since], 20).map(
+  return listArticles("WHERE a.provider IN ('arxiv','arxiv-rss') AND a.published_at >= ?", [since], 20).map(
     (article) => ({
       id: article.id,
       title: article.title,
@@ -294,29 +295,47 @@ export function buildTrends(filters: {
   source: TrendSource;
 }): TrendsReport {
   const rangeDays = filters.range === "7d" ? 7 : 30;
+  const githubCollectionEnabled = isProviderEnabled("github");
+  const papersCollectionEnabled =
+    isProviderEnabled("arxiv") || isProviderEnabled("arxiv-rss");
+
+  // Paused collection does not hide historical snapshots — it only means the
+  // numbers are stale, which `coverage.github.note` and the UI make explicit.
   const includeGithub = filters.source !== "arxiv";
   const includeArxiv = filters.source !== "github";
 
   const snapshots = repoSnapshotStats();
 
-  const arxivCount = (
-    getDb()
-      .prepare(`SELECT COUNT(*) AS c FROM articles WHERE provider = 'arxiv'`)
-      .get() as { c: number }
-  ).c;
+  const paperStats = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS c, MAX(published_at) AS latest
+       FROM articles WHERE provider IN ('arxiv','arxiv-rss')`,
+    )
+    .get() as { c: number; latest: string | null };
 
   const coverage: TrendCoverage = {
     sampledAt: new Date().toISOString(),
     github: {
-      available: true,
+      available: githubCollectionEnabled,
+      collectionEnabled: githubCollectionEnabled,
       reposTracked: snapshots.repos,
       snapshots: snapshots.snapshots,
       oldestSnapshotAt: snapshots.oldest,
-      note: snapshots.snapshots === 0
-        ? "尚无仓库快照，点击「Collect data」采集。"
-        : "Star 增长率仅在存在两次以上历史快照时计算。",
+      latestSnapshotAt: snapshots.latest,
+      note: !githubCollectionEnabled
+        ? snapshots.snapshots === 0
+          ? "GitHub 自动采集已暂停，且没有历史快照。"
+          : "GitHub 自动采集已暂停：以下仓库指标来自历史快照，不是实时数据。"
+        : snapshots.snapshots === 0
+          ? "尚无仓库快照，点击「Collect data」采集。"
+          : "Star 增长率仅在存在两次以上历史快照、且跨度 ≥24 小时时计算。",
     },
-    arxiv: { available: true, articles: Number(arxivCount) },
+    arxiv: {
+      available: papersCollectionEnabled,
+      collectionEnabled: papersCollectionEnabled,
+      articles: Number(paperStats.c),
+      latestArticleAt: paperStats.latest ? String(paperStats.latest) : null,
+    },
   };
 
   const report: TrendsReport = {
@@ -329,7 +348,7 @@ export function buildTrends(filters: {
     emergingTopics: buildEmergingTopics(rangeDays),
     earlySignals: includeGithub ? buildEarlySignals(rangeDays) : [],
     scoringExplanation:
-      "五个指标独立计算并展示：Popularity（当前热度，对数化 star）、Momentum（仅在有历史快照时计算增长率）、Technical Merit（代码/文档/发布/复现）、Evidence Quality（README/许可证/Release/演示）、Relevance（与关注方向相关性）。综合排序为加权求和（权重在每条理由中说明），momentum 缺失时其权重并入证据与技术价值，不做猜测。",
+      "五个指标独立计算并展示：Popularity（当前热度，对数化 star）、Momentum（仅在有 ≥2 次快照且跨度 ≥24 小时时计算增长率）、Technical Merit（代码/文档/发布/复现）、Evidence Quality（README/许可证/Release/演示）、Relevance（与关注方向相关性）。综合排序为加权求和（权重在每条理由中说明），momentum 缺失时其权重并入证据与技术价值，不做猜测。采集暂停时仅展示历史快照，不据此推断当前趋势。",
     filters,
   };
 

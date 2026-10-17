@@ -22,8 +22,17 @@ export function CoveragePanel({ coverage }: { coverage: TrendCoverage }) {
       </p>
       <ul className="mt-2 flex flex-col gap-1.5 text-xs leading-5 text-muted-foreground">
         <li>
-          <span className="font-medium text-foreground">GitHub</span>：跟踪{" "}
-          {coverage.github.reposTracked} 个仓库、{coverage.github.snapshots} 次快照
+          <span className="font-medium text-foreground">GitHub</span>：
+          <Badge
+            variant={coverage.github.collectionEnabled ? "accent" : "warning"}
+            className="mx-1 font-mono uppercase tracking-wide"
+          >
+            {coverage.github.collectionEnabled ? "collecting" : "paused"}
+          </Badge>
+          跟踪 {coverage.github.reposTracked} 个仓库、{coverage.github.snapshots} 次快照
+          {coverage.github.latestSnapshotAt
+            ? `，最新采样 ${new Date(coverage.github.latestSnapshotAt).toLocaleString()}`
+            : ""}
           {coverage.github.oldestSnapshotAt
             ? `（最早 ${new Date(coverage.github.oldestSnapshotAt).toLocaleString()}）`
             : ""}
@@ -31,7 +40,17 @@ export function CoveragePanel({ coverage }: { coverage: TrendCoverage }) {
         </li>
         <li>
           <span className="font-medium text-foreground">arXiv</span>：
-          {coverage.arxiv.articles} 篇已采集论文。
+          <Badge
+            variant={coverage.arxiv.collectionEnabled ? "accent" : "warning"}
+            className="mx-1 font-mono uppercase tracking-wide"
+          >
+            {coverage.arxiv.collectionEnabled ? "collecting" : "paused"}
+          </Badge>
+          {coverage.arxiv.articles} 篇已采集论文
+          {coverage.arxiv.latestArticleAt
+            ? `，最新发布时间 ${new Date(coverage.arxiv.latestArticleAt).toLocaleString()}`
+            : ""}
+          。
         </li>
       </ul>
     </div>

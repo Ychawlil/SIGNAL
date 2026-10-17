@@ -100,7 +100,10 @@ export default function TrendsPage() {
     setError(null);
     try {
       const response = await fetch("/api/trends/collect", { method: "POST" });
-      if (!response.ok) throw new Error(`Collect failed (${response.status})`);
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Collect failed (${response.status})`);
+      }
       const summary = (await response.json()) as CollectSummary;
       setCollectSummary(summary);
       const data = await fetchTrends({ range, topic, source });
@@ -111,6 +114,8 @@ export default function TrendsPage() {
       setCollecting(false);
     }
   }, [range, topic, source]);
+
+  const githubPaused = report ? !report.coverage.github.collectionEnabled : false;
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,13 +131,23 @@ export default function TrendsPage() {
             发现待验证的技术线索。高热度不等于技术突破：热度、增长、技术价值、证据质量与相关性分别展示。
           </p>
         </div>
-        <Button variant="primary" size="sm" onClick={onCollect} disabled={collecting}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onCollect}
+          disabled={collecting || githubPaused}
+          title={
+            githubPaused
+              ? "GitHub 采集已暂停（SIGNAL_DISABLED_PROVIDERS）"
+              : "采集 GitHub 快照"
+          }
+        >
           {collecting ? (
             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <TrendingUp className="h-3.5 w-3.5" />
           )}
-          {collecting ? "Collecting…" : "Collect data"}
+          {githubPaused ? "Collection paused" : collecting ? "Collecting…" : "Collect data"}
         </Button>
       </header>
 
@@ -202,9 +217,20 @@ export default function TrendsPage() {
               title="Rising Repositories"
               description="新建或近期活跃的相关仓库；增长率为真实快照序列计算，缺少历史快照时明确标注 unknown。"
             />
+            {githubPaused && report.risingRepos.length > 0 && (
+              <p className="mb-2.5 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs leading-5 text-warning">
+                GitHub 自动采集已暂停，以下指标来自历史快照
+                {report.coverage.github.latestSnapshotAt
+                  ? `（最新采样：${new Date(report.coverage.github.latestSnapshotAt).toLocaleString()}）`
+                  : ""}
+                ，不代表当前状态。
+              </p>
+            )}
             {report.risingRepos.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border-strong bg-panel px-6 py-10 text-center text-sm text-muted-foreground">
-                暂无仓库数据。点击「Collect data」采集 GitHub 快照。
+                {githubPaused
+                  ? "GitHub 采集已暂停，且没有历史仓库快照可展示。"
+                  : "暂无仓库数据。点击「Collect data」采集 GitHub 快照。"}
               </p>
             ) : (
               <div className="grid gap-2.5 lg:grid-cols-2">

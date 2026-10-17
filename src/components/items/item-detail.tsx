@@ -13,7 +13,6 @@ import {
   CategoryBadge,
   ConfidenceBadge,
   ImportanceMeter,
-  MockTag,
 } from "./meta";
 
 function Section({ label, children }: { label: string; children: ReactNode }) {
@@ -44,7 +43,6 @@ export function ItemDetail({ item }: ItemDetailProps) {
       <div className="px-5 pb-4 pt-5">
         <div className="flex flex-wrap items-center gap-1.5">
           <CategoryBadge category={item.category} />
-          {item.isMock && <MockTag />}
         </div>
         <h2 className="mt-3 text-lg font-semibold leading-7 text-foreground">
           {item.title}
@@ -87,7 +85,7 @@ export function ItemDetail({ item }: ItemDetailProps) {
             className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Source (sample)
+            Open source
           </a>
         </div>
       </div>

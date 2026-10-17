@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Search, SlidersHorizontal, Star } from "lucide-react";
+import { LayoutGrid, List, RefreshCw, Search, SlidersHorizontal, Star } from "lucide-react";
 import { ItemCard } from "@/components/items/item-card";
 import { ItemDetail } from "@/components/items/item-detail";
 import { ItemRow } from "@/components/items/item-row";
@@ -20,15 +14,12 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { useLibrary } from "@/components/providers";
 import { CATEGORIES, SORT_OPTIONS, TOPIC_NAMES } from "@/lib/constants";
-import { INTELLIGENCE_ITEMS } from "@/lib/mock-data";
-import type {
-  CategoryId,
-  IntelligenceItem,
-  SortKey,
-  TopicId,
-} from "@/lib/types";
+import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
+import type { CategoryId, IntelligenceItem, SortKey, TopicId } from "@/lib/types";
+import type { SignalStats } from "@/lib/server/signals";
 
 type ViewMode = "list" | "grid";
+const PAGE_SIZE = 60;
 
 function SkeletonRow() {
   return (
@@ -58,24 +49,32 @@ function SkeletonGrid() {
   );
 }
 
-/** User-action-driven loading skeleton (never setState inside an effect). */
-function useSimulatedLoading(delay = 260) {
-  const [loading, setLoading] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+function buildQuery(params: {
+  q: string;
+  category: CategoryId | "all";
+  topic: TopicId | "all";
+  source: string;
+  sort: SortKey;
+  page: number;
+}): string {
+  const qs = new URLSearchParams();
+  qs.set("page", String(params.page));
+  qs.set("pageSize", String(PAGE_SIZE));
+  if (params.q.trim()) qs.set("q", params.q.trim());
+  if (params.category !== "all") qs.set("category", params.category);
+  if (params.topic !== "all") qs.set("topic", params.topic);
+  if (params.source !== "all") qs.set("source", params.source);
+  qs.set("sort", params.sort);
+  return `/api/signals?${qs.toString()}`;
+}
 
-  const begin = useCallback(() => {
-    setLoading(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setLoading(false), delay);
-  }, [delay]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return [loading, begin] as const;
+async function requestSignals(
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ items: SignalRecord[]; total: number }> {
+  const response = await fetch(url, { cache: "no-store", signal });
+  if (!response.ok) throw new Error(`请求失败 (${response.status})`);
+  return response.json() as Promise<{ items: SignalRecord[]; total: number }>;
 }
 
 export function ExploreClient() {
@@ -83,63 +82,123 @@ export function ExploreClient() {
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [openId, setOpenId] = useState(() => searchParams.get("open") ?? null);
   const [category, setCategory] = useState<CategoryId | "all">("all");
   const [topic, setTopic] = useState<TopicId | "all">("all");
   const [source, setSource] = useState<string>("all");
   const [sort, setSort] = useState<SortKey>("newest");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("list");
-  const [loading, beginLoading] = useSimulatedLoading();
-  const [selected, setSelected] = useState<IntelligenceItem | null>(
-    () =>
-      INTELLIGENCE_ITEMS.find((i) => i.id === searchParams.get("open")) ?? null,
-  );
 
-  const sources = useMemo(
-    () => Array.from(new Set(INTELLIGENCE_ITEMS.map((i) => i.sourceName))).sort(),
-    [],
-  );
+  const [records, setRecords] = useState<SignalRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<SignalStats | null>(null);
+  const [selected, setSelected] = useState<IntelligenceItem | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = INTELLIGENCE_ITEMS.filter((item) => {
-      if (q) {
-        const haystack = [
-          item.title,
-          item.summary,
-          item.keyChange,
-          item.sourceName,
-          ...item.tags,
-        ]
-          .join(" ")
-          .toLowerCase();
-        if (!q.split(/\s+/).every((token) => haystack.includes(token))) {
-          return false;
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce the search input before it drives a server request.
+  useEffect(() => {
+    debounceTimer.current = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    requestSignals(
+      buildQuery({ q: debouncedQuery, category, topic, source, sort, page: 1 }),
+      controller.signal,
+    )
+      .then((data) => {
+        if (active) {
+          setRecords(data.items);
+          setTotal(data.total);
+          setPage(1);
+          setError(null);
         }
-      }
-      if (category !== "all" && item.category !== category) return false;
-      if (topic !== "all" && !item.topics.includes(topic)) return false;
-      if (source !== "all" && item.sourceName !== source) return false;
-      if (favoritesOnly && !isFavorite(item.id)) return false;
-      return true;
-    });
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [debouncedQuery, category, topic, source, sort, refreshToken]);
 
-    return filtered.sort((a, b) => {
-      if (sort === "importance") return b.importanceScore - a.importanceScore;
-      if (sort === "confidence") {
-        const order = { high: 3, medium: 2, low: 1 } as const;
-        return order[b.confidenceLevel] - order[a.confidenceLevel];
-      }
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-    });
-  }, [query, category, topic, source, sort, favoritesOnly, isFavorite]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/signals/stats", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data: SignalStats) => {
+        if (active) setStats(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
+  const items = useMemo(() => records.map(toIntelligenceItem), [records]);
+
+  const visibleItems = useMemo(
+    () => (favoritesOnly ? items.filter((item) => isFavorite(item.id)) : items),
+    [favoritesOnly, items, isFavorite],
+  );
+
+  const openItem = useMemo(
+    () => (openId ? (items.find((item) => item.id === openId) ?? null) : null),
+    [openId, items],
+  );
+
+  const detailItem = selected ?? openItem;
+
+  const hasMore = records.length < total;
   const hasActiveFilters =
-    query.trim() !== "" ||
+    debouncedQuery.trim() !== "" ||
     category !== "all" ||
     topic !== "all" ||
     source !== "all" ||
     favoritesOnly;
+
+  const sources = stats?.sources ?? [];
+
+  const resetFilters = () => {
+    setQuery("");
+    setDebouncedQuery("");
+    setCategory("all");
+    setTopic("all");
+    setSource("all");
+    setFavoritesOnly(false);
+  };
+
+  const loadMore = () => {
+    setLoadingMore(true);
+    requestSignals(
+      buildQuery({ q: debouncedQuery, category, topic, source, sort, page: page + 1 }),
+    )
+      .then((data) => {
+        setRecords((prev) => [...prev, ...data.items]);
+        setTotal(data.total);
+        setPage((prev) => prev + 1);
+      })
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setLoadingMore(false));
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,7 +211,7 @@ export function ExploreClient() {
             Explore
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            浏览、检索与筛选全部示例情报。收藏入口与详情操作均已可用。
+            浏览、检索与筛选已采集的真实情报（arXiv / GitHub / Hacker News / RSS）。
           </p>
         </div>
         <Segmented<ViewMode>
@@ -174,7 +233,7 @@ export function ExploreClient() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                beginLoading();
+                setLoading(true);
               }}
               placeholder="Search by keyword, tag, or source…"
               className="pl-9"
@@ -186,7 +245,7 @@ export function ExploreClient() {
             size="sm"
             onClick={() => {
               setFavoritesOnly((v) => !v);
-              beginLoading();
+              setLoading(true);
             }}
           >
             <Star className={favoritesOnly ? "h-3.5 w-3.5 fill-current" : "h-3.5 w-3.5"} />
@@ -200,7 +259,7 @@ export function ExploreClient() {
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as CategoryId | "all");
-              beginLoading();
+              setLoading(true);
             }}
             aria-label="Filter by category"
             className="w-full sm:w-56"
@@ -217,7 +276,7 @@ export function ExploreClient() {
             value={topic}
             onChange={(e) => {
               setTopic(e.target.value as TopicId | "all");
-              beginLoading();
+              setLoading(true);
             }}
             aria-label="Filter by subject"
             className="w-full sm:w-48"
@@ -234,7 +293,7 @@ export function ExploreClient() {
             value={source}
             onChange={(e) => {
               setSource(e.target.value);
-              beginLoading();
+              setLoading(true);
             }}
             aria-label="Filter by source"
             className="w-full sm:w-52"
@@ -251,7 +310,7 @@ export function ExploreClient() {
             value={sort}
             onChange={(e) => {
               setSort(e.target.value as SortKey);
-              beginLoading();
+              setLoading(true);
             }}
             aria-label="Sort by"
             className="w-full sm:w-44"
@@ -268,11 +327,29 @@ export function ExploreClient() {
       {/* Results */}
       <div>
         <p className="mb-3 font-mono text-xs tabular-nums text-muted-foreground">
-          {results.length} signal{results.length === 1 ? "" : "s"}
+          {favoritesOnly ? visibleItems.length : total} signal{total === 1 ? "" : "s"}
           {hasActiveFilters ? " · filtered" : ""}
         </p>
 
-        {loading ? (
+        {error && (
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3">
+            <p className="text-sm text-danger">加载失败：{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setLoading(true);
+                setError(null);
+                setRefreshToken((t) => t + 1);
+              }}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {!error && loading ? (
           view === "grid" ? (
             <SkeletonGrid />
           ) : (
@@ -282,48 +359,49 @@ export function ExploreClient() {
               ))}
             </div>
           )
-        ) : results.length === 0 ? (
+        ) : !error && visibleItems.length === 0 ? (
           <EmptyState
             icon={<Search />}
             title="No matching signals"
-            description="调整关键词或筛选条件后再试。"
+            description="调整关键词或筛选条件后再试，或先在 Settings 中采集数据。"
             action={
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setQuery("");
-                  setCategory("all");
-                  setTopic("all");
-                  setSource("all");
-                  setFavoritesOnly(false);
-                }}
-              >
+              <Button size="sm" variant="outline" onClick={resetFilters}>
                 Clear filters
               </Button>
             }
           />
-        ) : view === "grid" ? (
+        ) : !error && view === "grid" ? (
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-            {results.map((item) => (
+            {visibleItems.map((item) => (
               <ItemCard key={item.id} item={item} onOpen={setSelected} />
             ))}
           </div>
-        ) : (
+        ) : !error ? (
           <div className="flex flex-col gap-2.5">
-            {results.map((item) => (
+            {visibleItems.map((item) => (
               <ItemRow key={item.id} item={item} onOpen={setSelected} />
             ))}
+          </div>
+        ) : null}
+
+        {!error && !loading && hasMore && !favoritesOnly && (
+          <div className="mt-4 flex justify-center">
+            <Button variant="outline" size="sm" disabled={loadingMore} onClick={loadMore}>
+              {loadingMore ? "Loading…" : `Load more (${total - records.length} remaining)`}
+            </Button>
           </div>
         )}
       </div>
 
       <Drawer
-        open={selected !== null}
-        onClose={() => setSelected(null)}
+        open={detailItem !== null}
+        onClose={() => {
+          setSelected(null);
+          setOpenId(null);
+        }}
         title="Intelligence detail"
       >
-        {selected && <ItemDetail item={selected} />}
+        {detailItem ? <ItemDetail item={detailItem} /> : null}
       </Drawer>
     </div>
   );

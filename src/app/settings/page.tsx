@@ -1,14 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Database, Moon, ShieldCheck, Sun } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Database, Moon, Save, ShieldCheck, Sun } from "lucide-react";
 import { useSettings, useTheme } from "@/components/providers";
 import { SourcePanel } from "@/components/settings/source-panel";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SORT_OPTIONS } from "@/lib/constants";
-import type { SortKey } from "@/lib/types";
+import type { SortKey, TopicId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function SettingSection({
@@ -39,7 +40,29 @@ function SettingSection({
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { settings, updateSettings, setFocusWeight } = useSettings();
+  const { settings, updateSettings } = useSettings();
+
+  const [draftWeights, setDraftWeights] = useState<Record<TopicId, number>>(() =>
+    Object.fromEntries(settings.focusAreas.map((area) => [area.id, area.weight])) as Record<
+      TopicId,
+      number
+    >,
+  );
+  const [saved, setSaved] = useState(false);
+
+  const weightsDirty = settings.focusAreas.some(
+    (area) => (draftWeights[area.id] ?? area.weight) !== area.weight,
+  );
+
+  const saveWeights = () => {
+    updateSettings({
+      focusAreas: settings.focusAreas.map((area) => ({
+        ...area,
+        weight: draftWeights[area.id] ?? area.weight,
+      })),
+    });
+    setSaved(true);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -125,17 +148,36 @@ export default function SettingsPage() {
                 min={0}
                 max={100}
                 step={5}
-                value={area.weight}
-                onChange={(e) => setFocusWeight(area.id, Number(e.target.value))}
+                value={draftWeights[area.id] ?? area.weight}
+                onChange={(e) =>
+                  setDraftWeights((prev) => ({
+                    ...prev,
+                    [area.id]: Number(e.target.value),
+                  }))
+                }
                 className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-panel-secondary accent-accent"
                 aria-label={`${area.label} weight`}
               />
               <span className="w-9 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                {area.weight}
+                {draftWeights[area.id] ?? area.weight}
               </span>
             </li>
           ))}
         </ul>
+        <div className="mt-5 flex items-center justify-end gap-3 border-t border-border pt-4">
+          <span className="text-xs text-muted-foreground">
+            {weightsDirty ? "有未保存的修改" : saved ? "已保存到本地浏览器" : ""}
+          </span>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={saveWeights}
+            disabled={!weightsDirty}
+          >
+            <Save className="h-3.5 w-3.5" />
+            保存
+          </Button>
+        </div>
       </SettingSection>
 
       <div className="grid gap-4 lg:grid-cols-2">

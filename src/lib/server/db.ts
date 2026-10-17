@@ -342,7 +342,7 @@ export function startRun(provider: ProviderId): RunRecord {
 export function finishRun(
   run: RunRecord,
   outcome: {
-    status: "success" | "error" | "unconfigured";
+    status: "success" | "error" | "unconfigured" | "disabled";
     itemsSeen?: number;
     itemsNew?: number;
     itemsUpdated?: number;

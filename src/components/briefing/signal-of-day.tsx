@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowUpRight } from "lucide-react";
-import { DAILY_BRIEFING, INTELLIGENCE_ITEMS } from "@/lib/mock-data";
 import type { IntelligenceItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,15 +9,28 @@ import { ConfidenceBadge, ImportanceMeter } from "@/components/items/meta";
 import { SectionHeading } from "./section-heading";
 
 interface SignalOfDayProps {
+  item: IntelligenceItem | null;
   onOpen: (item: IntelligenceItem) => void;
 }
 
-export function SignalOfDay({ onOpen }: SignalOfDayProps) {
-  const item = INTELLIGENCE_ITEMS.find(
-    (i) => i.id === DAILY_BRIEFING.signalOfTheDayId,
-  );
-
-  if (!item) return null;
+export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
+  if (!item) {
+    return (
+      <section>
+        <SectionHeading
+          index="B"
+          label="Highlight"
+          title="Signal of the Day"
+          description="今日最值得深入理解的一项技术进展。"
+        />
+        <Card>
+          <CardContent className="p-5 text-sm text-muted-foreground">
+            今天没有达到精选阈值的情报。
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section>

@@ -1,7 +1,7 @@
 import type { CategoryId } from "@/lib/types";
 
 /** Identifiers for the pluggable intelligence sources. */
-export type ProviderId = "arxiv" | "github" | "rss" | "hackernews";
+export type ProviderId = "arxiv" | "arxiv-rss" | "github" | "rss" | "hackernews";
 
 export type ProviderHealth =
   | "ok"
@@ -41,6 +41,14 @@ export interface ProviderResult {
   cursor?: string;
   /** ETag / Last-Modified style token for conditional requests. */
   etag?: string;
+  /**
+   * Override the incremental watermark stored after this run. Used when a
+   * provider stopped early (page cap / budget) and must resume from an older
+   * point rather than from "now", so no records are skipped.
+   */
+  nextSince?: string;
+  /** Non-fatal problems (e.g. a later page failed) recorded but not fatal. */
+  warnings?: string[];
 }
 
 export interface FetchContext {
@@ -83,11 +91,15 @@ export interface ProviderStatus {
   name: string;
   health: ProviderHealth;
   message: string;
+  /** False when automatic collection is paused via SIGNAL_DISABLED_PROVIDERS. */
+  enabled: boolean;
   lastRunAt: string | null;
   lastSuccessAt: string | null;
   lastItemsSeen: number | null;
   lastItemsNew: number | null;
   lastError: string | null;
+  /** Rows currently stored for this provider (historical data is kept). */
+  storedArticles: number;
 }
 
 export interface SyncSummary {
@@ -96,7 +108,7 @@ export interface SyncSummary {
   runs: {
     provider: ProviderId;
     name: string;
-    status: "success" | "error" | "unconfigured";
+    status: "success" | "error" | "unconfigured" | "disabled";
     itemsSeen: number;
     itemsNew: number;
     message: string | null;

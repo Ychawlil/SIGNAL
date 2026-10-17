@@ -69,7 +69,6 @@ export interface IntelligenceItem {
   tags: string[];
   topics: TopicId[];
   readingTimeMinutes: number;
-  isMock?: boolean;
 }
 
 export type ResearchKind = "paper" | "report" | "open-source";
@@ -91,7 +90,6 @@ export interface ResearchItem {
   publishedAt: string;
   importanceScore: number;
   tags: string[];
-  isMock?: boolean;
 }
 
 export interface WorthFollowingItem {

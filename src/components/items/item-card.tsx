@@ -3,7 +3,7 @@
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
 import { FavoriteButton } from "./favorite-button";
-import { CategoryBadge, ConfidenceBadge, ImportanceMeter, MockTag } from "./meta";
+import { CategoryBadge, ConfidenceBadge, ImportanceMeter } from "./meta";
 import { useLibrary } from "@/components/providers";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,6 @@ export function ItemCard({ item, onOpen }: ItemCardProps) {
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <CategoryBadge category={item.category} />
-          {item.isMock && <MockTag />}
         </div>
         <FavoriteButton id={item.id} />
       </div>

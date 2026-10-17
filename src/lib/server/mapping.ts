@@ -17,6 +17,7 @@ function confidenceForProvider(provider: ProviderId): ConfidenceLevel {
     case "github":
       return "high";
     case "arxiv":
+    case "arxiv-rss":
       return "medium";
     case "rss":
       return "low";
@@ -56,7 +57,7 @@ export function articleToResearchItem(
   return {
     id: `rsr-${article.provider}-${article.id}`,
     title: article.title,
-    kind: article.provider === "arxiv" ? "paper" : "open-source",
+    kind: article.provider === "arxiv" || article.provider === "arxiv-rss" ? "paper" : "open-source",
     category: article.category,
     topics: [],
     researchQuestion: article.summary,

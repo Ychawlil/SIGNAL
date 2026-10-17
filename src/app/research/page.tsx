@@ -1,23 +1,47 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
-import { BookOpen, ChevronDown, FileText, FlaskConical, GitBranch } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  BookOpen,
+  ChevronDown,
+  ExternalLink,
+  FileText,
+  FlaskConical,
+  GitBranch,
+  RefreshCw,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { CATEGORIES, TOPIC_NAMES } from "@/lib/constants";
-import { RESEARCH_ITEMS } from "@/lib/mock-data";
-import type { CategoryId, ResearchItem, ResearchKind } from "@/lib/types";
+import { categoryToTopics } from "@/lib/topics";
+import type { CategoryId, ConfidenceLevel, TopicId } from "@/lib/types";
+import type { AnalyzedArticleRow } from "@/lib/server/analysis/store";
 import { cn } from "@/lib/utils";
 
-type KindFilter = ResearchKind | "all";
+type KindFilter = "paper" | "report" | "open-source" | "all";
 
-const KIND_META: Record<ResearchKind, { label: string; icon: ReactNode }> = {
+const KIND_META: Record<Exclude<KindFilter, "all">, { label: string; icon: ReactNode }> = {
   paper: { label: "Paper", icon: <FileText className="h-3.5 w-3.5" /> },
   report: { label: "Report", icon: <BookOpen className="h-3.5 w-3.5" /> },
   "open-source": { label: "Open Source", icon: <GitBranch className="h-3.5 w-3.5" /> },
 };
+
+function kindOf(item: AnalyzedArticleRow): Exclude<KindFilter, "all"> {
+  if (item.provider === "arxiv" || item.provider === "arxiv-rss") return "paper";
+  if (item.provider === "github") return "open-source";
+  return "report";
+}
+
+function confidenceLabel(level: ConfidenceLevel): string {
+  return level === "high"
+    ? "证据充分"
+    : level === "medium"
+      ? "部分验证"
+      : "待验证";
+}
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -30,9 +54,11 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ResearchCard({ item }: { item: ResearchItem }) {
+function ResearchCard({ item }: { item: AnalyzedArticleRow }) {
   const [open, setOpen] = useState(false);
-  const meta = KIND_META[item.kind];
+  const kind = kindOf(item);
+  const meta = KIND_META[kind];
+  const { analysis } = item;
 
   return (
     <article className="rounded-lg border border-border bg-panel">
@@ -55,7 +81,8 @@ function ResearchCard({ item }: { item: ResearchItem }) {
             {item.title}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {item.sourceName} · {item.importanceScore}/100 importance
+            {item.sourceName} · 重要性 {analysis.importanceScore}/100 ·{" "}
+            {confidenceLabel(analysis.confidenceLevel)}
           </p>
         </div>
         <ChevronDown
@@ -69,45 +96,41 @@ function ResearchCard({ item }: { item: ResearchItem }) {
       {open && (
         <div className="fade-in border-t border-border px-4 pb-5 pt-4">
           <div className="grid gap-4">
-            <Field label="Research question">{item.researchQuestion}</Field>
-            <Field label="Core method">{item.coreMethod}</Field>
-            <Field label="Innovation">{item.innovation}</Field>
-            <Field label="Experiments & evidence">{item.evidence}</Field>
-            <Field label="Limitations & open problems">{item.limitations}</Field>
+            <Field label="One-line summary">{analysis.oneLineSummary || item.summary || "—"}</Field>
+            <Field label="Key change">{analysis.keyChange || "—"}</Field>
+            <Field label="Differences vs prior work">{analysis.differences || "—"}</Field>
+            <Field label="Experiments & evidence">{analysis.evidence || "—"}</Field>
+            <Field label="Limitations & open problems">{analysis.limitations || "—"}</Field>
+            <Field label="Potential impact">{analysis.impact || "—"}</Field>
+            <Field label="Personal relevance">{analysis.personalRelevance || "—"}</Field>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            {analysis.furtherReading.length > 0 && (
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                  Related works
-                </p>
-                <ul className="mt-1.5 flex flex-col gap-1">
-                  {item.relatedWorks.map((w) => (
-                    <li key={w} className="flex gap-2 text-sm leading-6 text-muted-foreground">
-                      <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-muted-accent" />
-                      {w}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                  Recommended reading order
+                  Recommended reading
                 </p>
                 <ol className="mt-1.5 flex flex-col gap-1">
-                  {item.readingOrder.map((step, i) => (
-                    <li key={step} className="flex gap-2 text-sm leading-6 text-muted-foreground">
+                  {analysis.furtherReading.map((ref, i) => (
+                    <li key={ref.url} className="flex gap-2 text-sm leading-6">
                       <span className="font-mono text-xs tabular-nums text-accent">
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      {step}
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-accent"
+                      >
+                        {ref.label || ref.url}
+                      </a>
                     </li>
                   ))}
                 </ol>
               </div>
-            </div>
+            )}
 
             <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
-              {item.topics.map((t) => (
+              {categoryToTopics(item.category).map((t: TopicId) => (
                 <Badge key={t} variant="accent">
                   {TOPIC_NAMES[t]}
                 </Badge>
@@ -117,6 +140,15 @@ function ResearchCard({ item }: { item: ResearchItem }) {
                   #{tag}
                 </Badge>
               ))}
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Source
+              </a>
             </div>
           </div>
         </div>
@@ -128,15 +160,38 @@ function ResearchCard({ item }: { item: ResearchItem }) {
 export default function ResearchPage() {
   const [kind, setKind] = useState<KindFilter>("all");
   const [category, setCategory] = useState<CategoryId | "all">("all");
+  const [items, setItems] = useState<AnalyzedArticleRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/analysis?pageSize=100", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Analysis request failed (${r.status})`);
+        return r.json();
+      })
+      .then((data: { items: AnalyzedArticleRow[] }) => {
+        if (active) {
+          setItems(data.items);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const results = useMemo(
     () =>
-      RESEARCH_ITEMS.filter((item) => {
-        if (kind !== "all" && item.kind !== kind) return false;
+      (items ?? []).filter((item) => {
+        if (kind !== "all" && kindOf(item) !== kind) return false;
         if (category !== "all" && item.category !== category) return false;
         return true;
       }),
-    [kind, category],
+    [items, kind, category],
   );
 
   return (
@@ -149,7 +204,7 @@ export default function ResearchPage() {
           Research
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          值得深入研究的论文、技术报告与开源项目。当前为示例阅读材料，未接入真实论文服务。
+          基于真实论文、报告与开源项目生成的结构化研究材料：摘要、关键变化、差异、证据、局限与推荐阅读。
         </p>
       </header>
 
@@ -179,11 +234,26 @@ export default function ResearchPage() {
         </Select>
       </div>
 
-      {results.length === 0 ? (
+      {error && (
+        <div className="flex flex-col items-start gap-3 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3">
+          <p className="text-sm text-danger">加载失败：{error}</p>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {!error && items === null ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          Loading research materials…
+        </div>
+      ) : !error && results.length === 0 ? (
         <EmptyState
           icon={<FlaskConical />}
           title="No research entries"
-          description="调整筛选条件后再试。"
+          description="先到 Analysis 页面运行分析，或调整筛选条件后再试。"
         />
       ) : (
         <div className="flex flex-col gap-2.5">

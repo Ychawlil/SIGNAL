@@ -3,7 +3,6 @@
 import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/components/search/search-dialog";
-import { DAILY_BRIEFING } from "@/lib/mock-data";
 import { DateLabel } from "@/components/live-time";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
@@ -14,7 +13,6 @@ interface TopbarProps {
 
 export function Topbar({ onOpenMobileNav }: TopbarProps) {
   const { openSearch } = useSearch();
-  const briefingReady = DAILY_BRIEFING.status === "generated";
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
@@ -35,20 +33,9 @@ export function Topbar({ onOpenMobileNav }: TopbarProps) {
       <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
         <DateLabel className="tabular-nums" />
         <span className="text-border-strong">/</span>
-        <span
-          className="inline-flex items-center gap-1.5"
-          title={
-            briefingReady
-              ? `Generated at ${DAILY_BRIEFING.generatedAt}`
-              : "Briefing is being generated"
-          }
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              briefingReady ? "bg-accent" : "bg-warning"
-            }`}
-          />
-          <span>{briefingReady ? "Briefing ready" : "Generating…"}</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+          <span>Live intelligence</span>
         </span>
       </div>
 

@@ -5,7 +5,7 @@ import type { ProviderId } from "@/lib/server/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_PROVIDERS: ProviderId[] = ["arxiv", "github", "hackernews", "rss"];
+const VALID_PROVIDERS: ProviderId[] = ["arxiv", "arxiv-rss", "github", "hackernews", "rss"];
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;

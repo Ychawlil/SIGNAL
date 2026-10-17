@@ -105,14 +105,22 @@ export interface TrendCoverage {
   sampledAt: string;
   github: {
     available: boolean;
+    /** False when automatic collection is paused (SIGNAL_DISABLED_PROVIDERS). */
+    collectionEnabled: boolean;
     reposTracked: number;
     snapshots: number;
     oldestSnapshotAt: string | null;
+    /** Time of the most recent stored snapshot (data freshness). */
+    latestSnapshotAt: string | null;
     note: string;
   };
   arxiv: {
     available: boolean;
+    /** False when the paper sources are paused. */
+    collectionEnabled: boolean;
     articles: number;
+    /** Most recent stored publication time across paper sources. */
+    latestArticleAt: string | null;
   };
 }
 

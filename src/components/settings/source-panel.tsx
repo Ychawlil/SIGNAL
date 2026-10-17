@@ -129,9 +129,32 @@ export function SourcePanel() {
         )}
 
         {lastSync && (
-          <div className="mt-4 rounded-md border border-border bg-panel-secondary px-3 py-2 font-mono text-xs text-muted-foreground">
-            Last sync added {lastSync.totalNew} article(s) across{" "}
-            {lastSync.runs.length} source(s).
+          <div className="mt-4 rounded-md border border-border bg-panel-secondary px-3 py-2 text-xs text-muted-foreground">
+            <p className="font-mono">
+              Last sync added {lastSync.totalNew} article(s) across{" "}
+              {lastSync.runs.filter((run) => run.status === "success").length}/
+              {lastSync.runs.length} enabled source(s).
+            </p>
+            <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px]">
+              {lastSync.runs.map((run) => (
+                <li key={run.provider}>
+                  <span
+                    className={cn(
+                      run.status === "success"
+                        ? "text-accent"
+                        : run.status === "disabled"
+                          ? "text-muted-accent"
+                          : "text-warning",
+                    )}
+                  >
+                    {run.name}
+                  </span>
+                  <span className="ml-1">
+                    {run.status === "disabled" ? "paused" : `${run.status} +${run.itemsNew}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -157,10 +180,18 @@ export function SourcePanel() {
                         <Badge className={cn("font-mono uppercase tracking-wide", HEALTH_STYLE[provider.health])}>
                           {HEALTH_LABEL[provider.health]}
                         </Badge>
+                        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-accent">
+                          {provider.enabled ? "自动采集：启用" : "自动采集：已暂停"}
+                        </span>
                       </div>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         {provider.message}
                       </p>
+                      {!provider.enabled && provider.lastError && (
+                        <p className="mt-1 text-xs leading-5 text-warning">
+                          最后失败原因：{provider.lastError}
+                        </p>
+                      )}
                     </div>
                     <div className="shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
                       <p>
@@ -170,9 +201,12 @@ export function SourcePanel() {
                         </span>
                       </p>
                       <p>
-                        last fetch:{" "}
-                        {provider.lastItemsNew ?? 0} new /{" "}
+                        last run: {provider.lastItemsNew ?? 0} new /{" "}
                         {provider.lastItemsSeen ?? 0} seen
+                      </p>
+                      <p>
+                        stored:{" "}
+                        <span className="text-foreground">{provider.storedArticles}</span> articles
                       </p>
                     </div>
                   </div>

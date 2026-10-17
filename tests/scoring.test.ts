@@ -55,7 +55,17 @@ describe("trend scoring", () => {
       snap(110, "2026-10-17T00:10:00Z"),
     ]);
     expect(detail.available).toBe(false);
-    expect(detail.note).toContain("间隔过短");
+    expect(detail.note).toContain("不足以判断增长趋势");
+  });
+
+  it("rejects momentum when the snapshots are minutes apart", () => {
+    // Sampling jitter over a few hours is not a growth trend.
+    const detail = momentumDetail([
+      snap(1000, "2026-10-17T00:00:00Z"),
+      snap(1003, "2026-10-17T03:00:00Z"),
+    ]);
+    expect(detail.available).toBe(false);
+    expect(detail.note).toContain("需 ≥24 小时");
   });
 
   it("computes momentum over a meaningful span", () => {

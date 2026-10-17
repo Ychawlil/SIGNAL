@@ -3,14 +3,6 @@ import type { CategoryId, ConfidenceLevel } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-export function MockTag() {
-  return (
-    <Badge variant="warning" className="font-mono uppercase tracking-wide">
-      Sample
-    </Badge>
-  );
-}
-
 export function CategoryBadge({ category }: { category: CategoryId }) {
   const meta = CATEGORY_MAP[category];
   return (

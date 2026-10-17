@@ -20,8 +20,8 @@ export function Sidebar() {
         <div className="flex items-start gap-2.5 rounded-md border border-border bg-panel p-3">
           <Database className="mt-0.5 h-4 w-4 shrink-0 text-muted-accent" />
           <div className="text-xs leading-5 text-muted-foreground">
-            <p className="font-medium text-foreground">Sample dataset</p>
-            <p className="mt-0.5">本阶段为本地示例数据，尚未接入实时情报源。</p>
+            <p className="font-medium text-foreground">Live intelligence</p>
+            <p className="mt-0.5">数据来自 arXiv、GitHub、Hacker News 与 RSS 订阅源。</p>
           </div>
         </div>
       </div>

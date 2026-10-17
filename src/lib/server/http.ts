@@ -82,6 +82,10 @@ interface RetryOptions {
   rateLimiter?: RateLimiter;
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  /** Delay used for HTTP 429 when the server sends no `Retry-After`. */
+  rateLimitDelayMs?: number;
+  /** Max additional attempts allowed for HTTP 429 (defaults to `retries`). */
+  rateLimitRetries?: number;
 }
 
 /**
@@ -94,9 +98,14 @@ export async function fetchWithRetry(
 ): Promise<Response> {
   const retries = options.retries ?? 3;
   const baseDelayMs = options.baseDelayMs ?? 1000;
+  const rateLimitDelayMs = options.rateLimitDelayMs ?? baseDelayMs;
+  const rateLimitRetries = options.rateLimitRetries ?? retries;
 
   let lastError: unknown;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  let transportAttempts = 0;
+  let rateLimitAttempts = 0;
+
+  for (;;) {
     let response: Response;
     try {
       response = await safeFetch(rawUrl, {
@@ -110,8 +119,9 @@ export async function fetchWithRetry(
       if (error instanceof UnsafeUrlError) throw error;
       if (options.signal?.aborted) throw error;
       lastError = error;
-      if (attempt < retries) {
-        await sleep(baseDelayMs * 2 ** attempt + Math.random() * 300);
+      if (transportAttempts < retries) {
+        await sleep(baseDelayMs * 2 ** transportAttempts + Math.random() * 300);
+        transportAttempts += 1;
         continue;
       }
       break;
@@ -119,19 +129,34 @@ export async function fetchWithRetry(
 
     if (response.ok) return response;
 
+    if (response.status === 429) {
+      if (rateLimitAttempts >= rateLimitRetries) {
+        throw new HttpError(`HTTP 429 from ${hostOf(rawUrl)}`, 429);
+      }
+      const retryAfter = Number(response.headers.get("retry-after"));
+      const delay =
+        Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : rateLimitDelayMs * 2 ** rateLimitAttempts;
+      rateLimitAttempts += 1;
+      await sleep(delay + Math.random() * 300);
+      continue;
+    }
+
     // 4xx responses (except 429) are not transient — fail immediately.
-    const retryable = response.status === 429 || response.status >= 500;
-    if (!retryable) {
+    if (response.status < 500) {
       throw new HttpError(`HTTP ${response.status} from ${hostOf(rawUrl)}`, response.status);
     }
-    if (attempt === retries) {
+    if (transportAttempts >= retries) {
       throw new HttpError(`HTTP ${response.status} from ${hostOf(rawUrl)}`, response.status);
     }
 
     const retryAfter = Number(response.headers.get("retry-after"));
-    const delay = Number.isFinite(retryAfter) && retryAfter > 0
-      ? retryAfter * 1000
-      : baseDelayMs * 2 ** attempt;
+    const delay =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : baseDelayMs * 2 ** transportAttempts;
+    transportAttempts += 1;
     await sleep(delay + Math.random() * 300);
   }
 

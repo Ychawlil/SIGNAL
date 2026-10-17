@@ -147,7 +147,9 @@ export function buildLearningPlan(): LearningPlan {
   const suggestions: LearningSuggestion[] = [];
   const generatedAt = new Date().toISOString();
 
-  const papers = saved.filter((item) => item.article.provider === "arxiv");
+  const papers = saved.filter(
+    (item) => item.article.provider === "arxiv" || item.article.provider === "arxiv-rss",
+  );
   const repos = saved.filter((item) => item.article.provider === "github");
   const withLimitations = saved.filter((item) => item.limitations);
 

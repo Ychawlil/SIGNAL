@@ -153,12 +153,18 @@ export function repoSnapshotStats(): {
   repos: number;
   snapshots: number;
   oldest: string | null;
+  latest: string | null;
 } {
   const database = getDb();
   const repos = (database.prepare(`SELECT COUNT(*) AS c FROM github_repos`).get() as { c: number }).c;
   const snapshots = (database.prepare(`SELECT COUNT(*) AS c FROM repo_snapshots`).get() as { c: number }).c;
-  const oldest = database
-    .prepare(`SELECT MIN(sampled_at) AS m FROM repo_snapshots`)
-    .get() as { m: string | null };
-  return { repos: Number(repos), snapshots: Number(snapshots), oldest: oldest.m ? String(oldest.m) : null };
+  const bounds = database
+    .prepare(`SELECT MIN(sampled_at) AS oldest, MAX(sampled_at) AS latest FROM repo_snapshots`)
+    .get() as { oldest: string | null; latest: string | null };
+  return {
+    repos: Number(repos),
+    snapshots: Number(snapshots),
+    oldest: bounds.oldest ? String(bounds.oldest) : null,
+    latest: bounds.latest ? String(bounds.latest) : null,
+  };
 }

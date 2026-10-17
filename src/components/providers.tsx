@@ -10,7 +10,7 @@ import {
 } from "react";
 import { STORAGE_KEYS, TOPIC_NAMES } from "@/lib/constants";
 import { usePersistentState } from "@/lib/hooks";
-import { TOPICS } from "@/lib/mock-data";
+import { TOPICS } from "@/lib/topics";
 import type {
   AppSettings,
   LibraryState,

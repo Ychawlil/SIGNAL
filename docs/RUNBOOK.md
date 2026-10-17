@@ -41,6 +41,9 @@ npm run build      # Next.js 生产构建（已通过）
 | ---- | ---- | ---- |
 | `GITHUB_TOKEN` | 否 | 提升 GitHub API 限额（60→5000 次/小时）。 |
 | `RSS_FEEDS` | 否 | 逗号分隔的 RSS/Atom 订阅源；缺省时 RSS 源 unconfigured。 |
+| `ARXIV_RSS_CATEGORIES` | 否 | arXiv 每日公告 RSS 分类，默认 `cs.AI,cs.LG,cs.RO,cs.CL,cs.SE`。 |
+| `SIGNAL_DISABLED_PROVIDERS` | 否 | 暂停自动采集的来源（`arxiv`/`arxiv-rss`/`github`/`rss`/`hackernews`）。暂停后不发请求、保留历史数据。 |
+| `SIGNAL_MIN_REQUEST_INTERVAL_MS` | 否 | 出站请求最小间隔；arXiv 相关来源强制 ≥3000ms。 |
 | `LLM_ANALYZER_API_KEY` | 否 | 启用 OpenAI 兼容分析引擎；缺省用内置规则引擎。 |
 | `LLM_ANALYZER_BASE_URL` / `LLM_ANALYZER_MODEL` | 否 | LLM 引擎端点与模型。 |
 | `SIGNAL_SCHEDULER_ENABLED` | 否 | `true` 启用定时任务（默认关闭）。 |
@@ -74,8 +77,9 @@ npm run build      # Next.js 生产构建（已通过）
 
 | 来源 | 风险 | 缓解 |
 | ---- | ---- | ---- |
-| GitHub | 未认证 core 60/h、search 10/min；实测验证期间触发过 403 限流 | 设 `GITHUB_TOKEN`；采集失败会记录且保留上次成功数据 |
-| arXiv | 公开但会限流（实测触发过 429） | 超时 30s + 有限重试；失败保留上次数据 |
+| arXiv RSS（rss.arxiv.org） | 与 legacy API 共享限流；单分类 feed 可达 ~1MB、冷缓存约 60s | 串行 + ≥3s 间隔 + 90s 超时；逐分类容错；默认 5 个分类 |
+| arXiv 导出 API | 官方条款要求「每 3 秒最多 1 次请求、单连接」；本机 IP 实测长期返回 429/503 | 当前已通过 `SIGNAL_DISABLED_PROVIDERS` 暂停；历史 50 条保留 |
+| GitHub | 未认证 core 60/h、search 10/min；实测触发 403 | 当前已暂停采集；历史 45 条文章与 73 仓库/219 快照保留，趋势页标注暂停与采样时间 |
 | Hacker News | Algolia API，免费且较宽松 | 有限重试；失败保留上次数据 |
 | RSS 媒体源 | 各站点反爬/限流；单个源失败不影响其他源 | 逐源容错、每源只取最近 30 条、SSRF 校验 |
 | LLM | 可选付费；本仓库未配置密钥，未实际调用过 | 缺省用免费规则引擎 |
@@ -105,6 +109,8 @@ npm run build      # Next.js 生产构建（已通过）
 3. 中文在 Windows PowerShell 控制台显示为乱码是控制台编码问题，数据库与浏览器
    中为正确 UTF-8（已实测）。
 4. GitHub/arXiv 的公开 API 限流会导致单次采集失败；任务会记录错误并保留上次成功数据。
+   若本机出口 IP 被 arXiv 封限（返回 `Rate exceeded.`），需等待解封或配置代理，
+   arXiv 采集在解封前无法获得新数据（其余来源不受影响）。
 
 ## 10. 后续优先级
 

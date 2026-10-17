@@ -1,16 +1,16 @@
-import { CATEGORIES, CATEGORY_MAP } from "@/lib/constants";
-import { INTELLIGENCE_ITEMS } from "@/lib/mock-data";
+import { CATEGORY_MAP } from "@/lib/constants";
+import type { CategoryId } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeading } from "./section-heading";
 
-export function TopicDistribution() {
-  const total = INTELLIGENCE_ITEMS.length;
-  const counts = CATEGORIES.map((cat) => ({
-    ...cat,
-    count: INTELLIGENCE_ITEMS.filter((i) => i.category === cat.id).length,
-  })).filter((c) => c.count > 0);
+interface TopicDistributionProps {
+  counts: { id: CategoryId; count: number }[];
+  total: number;
+}
 
-  const max = Math.max(...counts.map((c) => c.count), 1);
+export function TopicDistribution({ counts, total }: TopicDistributionProps) {
+  const visible = counts.filter((c) => c.count > 0);
+  const max = Math.max(...visible.map((c) => c.count), 1);
 
   return (
     <section>
@@ -18,12 +18,12 @@ export function TopicDistribution() {
         index="D"
         label="Distribution"
         title="Topic Distribution"
-        description="今日情报在各主题上的分布（示例数据）。"
+        description="已采集真实情报在各主题上的分布。"
       />
       <Card>
         <CardContent className="p-5">
           <ul className="flex flex-col gap-3">
-            {counts.map((cat) => (
+            {visible.map((cat) => (
               <li
                 key={cat.id}
                 className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[180px_1fr_auto] sm:items-center sm:gap-x-4"

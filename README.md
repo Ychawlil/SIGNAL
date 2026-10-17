@@ -33,17 +33,18 @@ It goes beyond headlines to help you understand **what changed, why it matters, 
 | Topic subscriptions & weekly review | Available |
 | GitHub trend tracking | Available |
 | Scheduled ingestion & analysis | Available |
-| Search and research exploration | Partially integrated |
+| Search and research exploration | Available |
 | Model version comparison | In progress |
-| X trend integration | Not yet implemented |
 
-The home, Explore, Research, and Topics pages still contain sample content. Real collected data is available through the Analysis, Trends, and Library workflows.
+All primary pages — Daily Briefing, Explore, Research, Topics, Analysis, Trends, and
+Library — render real records collected from the connected sources. No sample or
+placeholder content is served in production.
 
 ## ✦ How It Works
 
 SIGNAL collects, analyzes, and organizes technology intelligence into a searchable personal knowledge base.
 
-1. **Collect** — Retrieve articles and research from arXiv, GitHub, RSS feeds, and Hacker News.
+1. **Collect** — Retrieve articles and research from arXiv RSS/API, GitHub, RSS feeds, and Hacker News.
 2. **Analyze** — Extract key changes, evidence, limitations, and potential impact.
 3. **Prioritize** — Evaluate relevance, technical merit, evidence quality, and emerging trends.
 4. **Track** — Save discoveries, organize research, and review developments over time.
@@ -55,7 +56,8 @@ Original sources remain accessible. Official claims, preprints, peer-reviewed re
 - **Framework:** Next.js 16, React 19, TypeScript
 - **Styling:** Tailwind CSS v4, CSS variables, Lucide
 - **Database:** SQLite via Node.js `node:sqlite`
-- **Data sources:** arXiv, GitHub REST API, Hacker News, RSS/Atom
+- **Data sources:** arXiv daily RSS, arXiv export API, GitHub REST API, Hacker News, RSS/Atom
+  (arXiv and GitHub collection can be paused per source)
 - **Analysis:** Rule-based engine with optional OpenAI-compatible LLM integration
 - **Testing:** Vitest, ESLint, TypeScript, Next.js build
 
@@ -93,6 +95,10 @@ npm test           # Unit tests
 
 All environment variables are optional. arXiv and GitHub can work without API keys, subject to service rate limits.
 
+Sources can be paused individually with `SIGNAL_DISABLED_PROVIDERS`. A paused source
+makes no outbound request, keeps its historical rows, and is reported as "paused" in
+Settings and Trends.
+
 | Variable | Purpose |
 |---|---|
 | `GITHUB_TOKEN` | Higher GitHub API rate limits |
@@ -100,6 +106,9 @@ All environment variables are optional. arXiv and GitHub can work without API ke
 | `LLM_ANALYZER_BASE_URL` | OpenAI-compatible API endpoint |
 | `LLM_ANALYZER_MODEL` | Analysis model |
 | `RSS_FEEDS` | Additional RSS/Atom feeds |
+| `ARXIV_RSS_CATEGORIES` | arXiv daily announcement categories to follow |
+| `SIGNAL_DISABLED_PROVIDERS` | Pause automatic collection per source (e.g. `arxiv,github`) |
+| `SIGNAL_MIN_REQUEST_INTERVAL_MS` | Outbound request pacing (arXiv stays ≥3000) |
 | `SIGNAL_SCHEDULER_ENABLED` | Enable scheduled processing |
 | `SIGNAL_ADMIN_TOKEN` | Protect manual/admin endpoints |
 | `SIGNAL_DB_PATH` | Custom SQLite database path |
@@ -108,11 +117,10 @@ See `.env.example` and [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for additional con
 
 ## ✦ Roadmap
 
-- [ ] Complete migration from sample content to real data
 - [ ] Configure and validate LLM-powered analysis
 - [ ] Improve model-version and capability comparisons
 - [ ] Build reliable multi-day trend measurements
-- [ ] Add researcher and X signal tracking
+- [ ] Add researcher/community signal tracking beyond arXiv
 - [ ] Introduce browser-based end-to-end tests
 
 ## ✦ Security & Privacy
