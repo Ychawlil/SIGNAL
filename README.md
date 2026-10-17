@@ -1,232 +1,131 @@
-# SIGNAL — AI & Frontier Technology Intelligence Hub
+# SIGNAL
 
-> An AI and frontier technology intelligence hub for discovering,
-> understanding, and tracking meaningful technical progress.
+### AI & Frontier Technology Intelligence Hub
 
-SIGNAL is a personal research workbench for a computer-science student who
-wants to follow AI model releases, AI in mathematics and computer science,
-embodied intelligence, global research breakthroughs, and technology trends on
-GitHub and in the developer community — plus a curated slice of other frontier
-science. It is a
-single-user, locally deployed application: no accounts, no multi-tenant
-infrastructure.
+**Discover what matters. Understand what changes. Track what comes next.**
 
-> 中文简介：SIGNAL 是面向个人使用的 AI 与前沿科技情报工作台，重点跟踪 AI
-> 模型发布与迭代、AI 在数学和计算机科学中的应用、具身智能、国内外科研突破，
-> 以及 GitHub 与开发者社区的技术趋势，同时精选少量其他科学前沿进展。
+SIGNAL is a personal intelligence workbench for tracking AI breakthroughs, model releases, research papers, and emerging technology trends.
+
+It goes beyond headlines to help you understand **what changed, why it matters, and what is worth exploring next.**
+
+中文简介：SIGNAL 是一个个人 AI 与前沿科技情报工作台，聚焦 AI 模型、数学与计算机科学、具身智能、科研突破，以及 GitHub 上的新兴技术趋势。
 
 ---
 
-## Overview
+## ✦ Focus Areas
 
-SIGNAL exists because keeping up with AI is structurally hard:
+| Domain | What to Track |
+|---|---|
+| **AI Models** | New releases, capability shifts, reasoning, multimodal AI |
+| **AI × Science** | Mathematics, theorem proving, algorithms, scientific discovery |
+| **Physical AI** | Robotics, VLA, world models, robot learning |
+| **Agents & Coding** | AI agents, coding tools, inference and infrastructure |
+| **Open Source** | Emerging repositories, developer tools, project momentum |
+| **Frontier Science** | Selected breakthroughs in physics, biology, energy and beyond |
 
-- AI news is scattered, and it is difficult to tell which changes matter.
-- New models ship constantly, but capability differences between versions are
-  rarely laid out side by side.
-- Papers, open-source projects, and social trends lack a single tracking entry
-  point.
-- Generic summaries omit technical analysis, evidence assessment, and personal
-  learning value.
+## ✦ Features
 
-SIGNAL's goal is **not** to aggregate headlines. It is to help you understand
-technical progress, judge the quality of evidence, and find open questions that
-are worth your time to study and reproduce.
+| Feature | Status |
+|---|---|
+| Daily intelligence briefing | Available |
+| AI-powered article analysis | Available; rule-based by default |
+| Personal library, notes & collections | Available |
+| Topic subscriptions & weekly review | Available |
+| GitHub trend tracking | Available |
+| Scheduled ingestion & analysis | Available |
+| Search and research exploration | Partially integrated |
+| Model version comparison | In progress |
+| X trend integration | Not yet implemented |
 
-## Key Research Areas
+The home, Explore, Research, and Topics pages still contain sample content. Real collected data is available through the Analysis, Trends, and Library workflows.
 
-- AI Models & Releases
-- AI × Mathematics
-- AI × Computer Science
-- Physical AI & Robotics
-- AI Agents & Coding
-- Open Source & Developer Ecosystem
-- Global Research Breakthroughs
-- Technology Trends on GitHub & Community
-- Selected Frontier Science
+## ✦ How It Works
 
-## Features
+SIGNAL collects, analyzes, and organizes technology intelligence into a searchable personal knowledge base.
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| Daily Briefing | ✅ shipped | A generated, quality-filtered briefing (3–5 items, 24 h + 7-day backfill) is produced from collected articles on the Analysis page. The home page's briefing sections currently use clearly-marked sample data. |
-| Search & Explore | 🚧 in progress | Full search/filter UI exists; the Explore page currently browses sample data. Real collected articles are searchable via Library → Discover and the `/api/intelligence` API. |
-| Research Tracking | 🚧 in progress | Same-model / same-topic history works for real saved articles (Library → History). The Research page shows sample deep-dive reading material. |
-| Topic Monitoring | ✅ shipped | Built-in topic tracking (subscribe toggles) plus custom topics and keywords tied to saved items. |
-| Personal Library | ✅ shipped | Server-persisted favorites, notes, tags, read-later / read / reproduce states, research collections, weekly review, and learning suggestions. |
-| AI-powered Analysis | ✅ shipped (rule-based) | Structured per-item analysis: one-line summary, key change, differences, evidence, limitations, impact, relevance, further reading. An optional OpenAI-compatible LLM engine is implemented but **not configured**; without a key it falls back to the deterministic rule-based analyzer. |
-| Model Version Comparison | 🚧 in progress | Model/version/license/benchmark extraction and a version registry exist. Capability comparisons honestly report "缺乏可直接比较的证据" (no directly comparable evidence) when scores were not extractable. |
-| Open-source Trend Discovery | ✅ shipped (GitHub) | GitHub repository tracking with metric snapshots and five separated scores (popularity, momentum, technical merit, evidence quality, relevance). Researcher signals are derived from collected arXiv papers. |
-| Scheduled updates & monitoring | ✅ shipped | Idempotent, locked, recorded tasks plus an in-process scheduler (`SIGNAL_SCHEDULER_ENABLED=true`). Manual triggers and task status are available in Settings and `/api/tasks/status`. |
+1. **Collect** — Retrieve articles and research from arXiv, GitHub, RSS feeds, and Hacker News.
+2. **Analyze** — Extract key changes, evidence, limitations, and potential impact.
+3. **Prioritize** — Evaluate relevance, technical merit, evidence quality, and emerging trends.
+4. **Track** — Save discoveries, organize research, and review developments over time.
 
-## Current data status
+Original sources remain accessible. Official claims, preprints, peer-reviewed research, and independent verification are treated as distinct forms of evidence.
 
-SIGNAL has two data layers:
+## ✦ Tech Stack
 
-1. **Real data** (production path): articles collected from arXiv and GitHub
-   are stored in SQLite, analyzed, and drive the Analysis, Trends, Library, and
-   Settings pages.
-2. **Sample data** (Part 1 skeleton): the home Daily Briefing, Explore,
-   Research, and Topics pages still render clearly-marked sample data
-   (`src/lib/mock-data.ts`, `isMock: true`) while those surfaces are being
-   migrated to the real data layer.
+- **Framework:** Next.js 16, React 19, TypeScript
+- **Styling:** Tailwind CSS v4, CSS variables, Lucide
+- **Database:** SQLite via Node.js `node:sqlite`
+- **Data sources:** arXiv, GitHub REST API, Hacker News, RSS/Atom
+- **Analysis:** Rule-based engine with optional OpenAI-compatible LLM integration
+- **Testing:** Vitest, ESLint, TypeScript, Next.js build
 
-## Screenshots
+## ✦ Getting Started
 
-No screenshots are included yet — no placeholder image paths are referenced.
+### Requirements
 
-## Tech Stack
+- Node.js ≥ 22.5
+- npm
 
-- **Framework**: Next.js 16 (App Router) with Turbopack
-- **Language**: TypeScript, React 19
-- **Styling**: Tailwind CSS v4 (CSS variables, dark/light themes), Lucide icons
-- **Database**: Node.js built-in `node:sqlite` (single SQLite file, WAL mode).
-  No external DB service, no ORM — plain SQL.
-- **Ingestion**: arXiv export API (Atom), GitHub REST API, the Hacker News
-  Algolia API, and a generic RSS/Atom provider. All
-  outbound requests go through a guarded HTTP client (SSRF validation,
-  timeouts, bounded retries, rate limiting).
-- **Analysis**: built-in deterministic rule-based engine; optional
-  OpenAI-compatible chat-completions engine gated behind an env var.
-- **Testing**: Vitest (29 unit tests) + ESLint + `tsc --noEmit` + `next build`.
-- **Persistence of preferences**: `localStorage` for UI preferences (theme,
-  settings, topic subscriptions); all knowledge data lives in SQLite.
-
-## Getting Started
-
-Prerequisites:
-
-- **Node.js ≥ 22.5** (uses the built-in `node:sqlite` module; tested on 24.21)
-- npm (tested on 11.19)
+### Installation
 
 ```bash
 npm install
-cp .env.example .env.local   # optional — see Environment Variables
+cp .env.example .env.local
 npm run dev
 ```
 
-Next.js prints the URL in the terminal; the default is http://localhost:3000.
-If the port is already in use, use the URL from your terminal output.
+Open the URL printed in your terminal, usually `http://localhost:3000`.
 
-Production build and quality checks:
+The SQLite database is initialized automatically on first access.
+
+### Available Commands
 
 ```bash
-npm run build      # production build
-npm run start      # serve the production build
-npm run lint       # ESLint
-npm run typecheck  # tsc --noEmit
-npm test           # Vitest
+npm run dev        # Development server
+npm run build      # Production build
+npm run start      # Production server
+npm run lint       # Lint checks
+npm run typecheck  # TypeScript checks
+npm test           # Unit tests
 ```
 
-The database is created and migrated automatically on first access
-(`.data/signal.db`, `CREATE TABLE IF NOT EXISTS`). No manual migration step is
-required. See [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for the full production
-runbook (scheduling, backup/restore, quota risks, known issues).
+## ✦ Configuration
 
-## Environment Variables
+All environment variables are optional. arXiv and GitHub can work without API keys, subject to service rate limits.
 
-Copy `.env.example` to `.env.local` and set values as needed. **No variables
-are strictly required** — arXiv and GitHub work without keys. All secrets are
-read server-side only and never reach the browser bundle.
+| Variable | Purpose |
+|---|---|
+| `GITHUB_TOKEN` | Higher GitHub API rate limits |
+| `LLM_ANALYZER_API_KEY` | Enable LLM-based analysis |
+| `LLM_ANALYZER_BASE_URL` | OpenAI-compatible API endpoint |
+| `LLM_ANALYZER_MODEL` | Analysis model |
+| `RSS_FEEDS` | Additional RSS/Atom feeds |
+| `SIGNAL_SCHEDULER_ENABLED` | Enable scheduled processing |
+| `SIGNAL_ADMIN_TOKEN` | Protect manual/admin endpoints |
+| `SIGNAL_DB_PATH` | Custom SQLite database path |
 
-| Variable | Required | Purpose |
-| -------- | -------- | ------- |
-| `GITHUB_TOKEN` | optional | Raises the GitHub API limit from 60 to 5000 requests/hour. |
-| `RSS_FEEDS` | optional | Comma-separated RSS/Atom feed URLs for the blog/media provider. |
-| `LLM_ANALYZER_API_KEY` | optional | Enables the LLM analysis engine. Without it, the rule-based analyzer is used. |
-| `LLM_ANALYZER_BASE_URL` | optional | Base URL for the OpenAI-compatible endpoint. |
-| `LLM_ANALYZER_MODEL` | optional | Model name for the LLM analyzer. |
-| `SIGNAL_SCHEDULER_ENABLED` | optional | `true` enables the in-process scheduled pipeline. |
-| `SIGNAL_SCHEDULER_INTERVAL_MS` | optional | Scheduler interval in ms (default 21600000 = 6 h). |
-| `SIGNAL_ADMIN_TOKEN` | optional | When set, manual/admin endpoints require a matching bearer token. |
-| `SIGNAL_DB_PATH` | optional | Override the SQLite database path. |
-| `SIGNAL_REQUEST_TIMEOUT_MS` | optional | Outbound request timeout (default 15000). |
-| `SIGNAL_MIN_REQUEST_INTERVAL_MS` | optional | Minimum interval between outbound requests (default 1000). |
+See `.env.example` and [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for additional configuration and operational details.
 
-## Project Structure
+## ✦ Roadmap
 
-```
-src/
-  app/                 Next.js App Router routes (pages + /api routes)
-  components/          UI: design-system primitives, layout shell, search,
-                       briefing, items, library, trends, settings panels
-  lib/                 shared client code: types, constants, mock data,
-                       storage adapter, hooks, utils
-  lib/server/          server-only: providers, SQLite db, ingestion,
-                       analysis, trends, library, tasks, SSRF/HTTP guards
-  instrumentation.ts   scheduler entry point
-tests/                 Vitest unit tests
-docs/                  RUNBOOK.md (production runbook)
-public/                static assets
-```
+- [ ] Complete migration from sample content to real data
+- [ ] Configure and validate LLM-powered analysis
+- [ ] Improve model-version and capability comparisons
+- [ ] Build reliable multi-day trend measurements
+- [ ] Add researcher and X signal tracking
+- [ ] Introduce browser-based end-to-end tests
 
-## Data Sources and Reliability
+## ✦ Security & Privacy
 
-SIGNAL prioritizes, in order: official model releases and technical reports,
-arXiv / OpenReview and top conference and lab pages, the GitHub API (repos,
-releases, commits, growth metrics), university/lab/company research pages,
-researcher posts and community discussion, and reliable tech media for
-context.
+- Designed for single-user, local deployment.
+- Never commit API keys or private environment files.
+- External content and model outputs are treated as untrusted input.
+- AI-generated analysis should be verified against original sources.
 
-It explicitly separates:
+Do not expose the application to untrusted networks without appropriate access controls.
 
-- official vendor claims,
-- preprints,
-- peer-reviewed research,
-- independent reproduction, and
-- marketing.
+## ✦ License
 
-Each stored article keeps the original URL, source name, **content publish
-time**, and **fetch time** (never conflated), and titles/original content are
-kept in English. RSS is connected via configured public
-feeds (MIT News, MIT Technology Review, Google DeepMind, OpenAI), alongside
-Hacker News and arXiv/GitHub.
+Released under the [MIT License](./LICENSE).
 
-| Source | Status |
-| ------ | ------ |
-| arXiv (export API) | ✅ connected, keyless |
-| GitHub (REST API) | ✅ connected |
-| Hacker News (Algolia API) | ✅ connected, keyless |
-| RSS / blogs (MIT News, MIT Tech Review, DeepMind, OpenAI) | ✅ connected |
-
-## Roadmap
-
-Not yet implemented / in progress:
-
-- Migrate the home, Explore, Research, and Topics pages from sample data to the
-  real collection layer.
-- Configure and validate the LLM analysis engine.
-- Accumulate multi-day repository snapshots so the star-growth Momentum score
-  can be computed over a meaningful time series (currently "unknown" until two
-  snapshots exist).
-- Per-item capability comparison for model versions (reasoning/math/coding/
-  multimodal/agent) once benchmark scores can be extracted reliably.
-- Notifications for scheduled-task results; cron-style schedules (currently a
-  fixed interval).
-- End-to-end browser tests (Playwright) — currently unit tests only.
-
-## Privacy, Security and Limitations
-
-- **Single-user, local deployment.** There is no authentication, no accounts,
-  and no multi-tenant isolation. Do not expose the server to an untrusted
-  network without a reverse proxy and `SIGNAL_ADMIN_TOKEN`.
-- Never commit API keys; use `.env.local` (ignored by Git). `.env.example`
-  contains placeholders only.
-- All external content (web pages, paper text, model output) is treated as
-  untrusted input: it is rendered with React escaping, and LLM output is
-  whitelisted field-by-field.
-- Outbound requests are SSRF-checked (http/https only, public IPs only),
-  time-limited, and rate-limited.
-- Model-generated summaries are a **starting point, not a substitute** for
-  reading the original paper and checking the source yourself.
-
-## License and Contributions
-
-This project is licensed under the MIT License — see [LICENSE](./LICENSE) for
-the full text. (The MIT text covers this project's own code only; it does not
-apply to third-party dependencies, external data, or any trademarks.)
-
-Contributions are welcome: open an issue to discuss changes before submitting
-a pull request. No CI pipeline, issue templates, or other automation are set up
-at this time.#   S I G N A L  
- 
+This license applies to SIGNAL's own code, not third-party dependencies, external content, or trademarks.
