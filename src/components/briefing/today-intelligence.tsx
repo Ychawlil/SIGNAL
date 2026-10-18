@@ -12,14 +12,14 @@ export interface KeyThemeChip {
 interface TodayIntelligenceProps {
   /** Short editorial digest generated from the selected items. */
   digest: string;
-  /** Items selected for today's briefing. */
-  selectedCount: number;
+  /** Items selected for today's briefing; "—" until the first response lands. */
+  selectedCount: number | string;
   /** Items published in the last 24h. */
-  freshCount: number;
+  freshCount: number | string;
   /** Same 24h window, as seen by the analyzed pool. */
-  windowCount: number;
+  windowCount: number | string;
   /** Total articles stored. */
-  totalCount: number;
+  totalCount: number | string;
   themes: KeyThemeChip[];
   sourceMix: { sourceName: string; count: number }[];
   reduced: boolean;

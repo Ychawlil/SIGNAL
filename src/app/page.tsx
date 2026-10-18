@@ -416,10 +416,12 @@ export default function Home() {
         <>
           <TodayIntelligence
             digest={briefing?.digest ?? "—"}
-            selectedCount={briefing?.count ?? 0}
-            freshCount={stats?.last24h ?? 0}
-            windowCount={stats?.last24h ?? 0}
-            totalCount={stats?.total ?? 0}
+            // While the first request is in flight, show "—" instead of a
+            // confident 0 so the page does not look like an empty database.
+            selectedCount={briefing ? briefing.count : "—"}
+            freshCount={stats ? stats.last24h : "—"}
+            windowCount={stats ? stats.last24h : "—"}
+            totalCount={stats ? stats.total : "—"}
             themes={briefing?.keyThemes ?? []}
             sourceMix={briefing?.sourceMix ?? []}
             reduced={briefing?.reduced ?? false}

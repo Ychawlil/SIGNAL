@@ -11,9 +11,7 @@ It goes beyond headlines to help you understand **what changed, why it matters, 
 中文简介：SIGNAL 是一个个人 AI 与前沿科技情报工作台，聚焦 AI 模型、数学与计算机科学、具身智能、科研突破，以及 GitHub 上的新兴技术趋势。
 ## ✦ Screenshots
 
-![Trends & Intelligence](screenshots/trends.png)
-
-![Research Library](screenshots/library.png)
+![DailyBrief](screenshots/dailybrief.png)
 
 ---
 
@@ -116,12 +114,21 @@ The SQLite database is initialized automatically on first access.
 
 ### Desktop launcher (Windows)
 
-`scripts/launch.ps1` starts the dev server when it is not running, waits until it
-answers, then opens the browser. The `SIGNAL.bat` shortcut on the desktop is a thin
-wrapper around it; it finds the project through this script and reads the port from
-`package.json`, so both survive a port change.
+`SIGNAL.bat` on the desktop is a thin wrapper around `scripts/launch.ps1`. It:
 
-Closing the minimised console window that the launcher opens stops the server.
+1. finds the project (the folder next to the `.bat` that owns `scripts/launch.ps1`);
+2. reads the port from `package.json`;
+3. opens the browser immediately if the site already answers, otherwise starts
+   `npm run dev` in a minimised console and waits for it;
+4. warms the data routes (`/api/signals/stats`, `/api/briefing`, …) before opening
+   the browser, because Next compiles each route on first request and an
+   unwarmed page would sit on zeroed counters;
+5. allows only one launcher at a time, so an impatient double-click cannot spawn
+   two dev servers.
+
+Every run appends to `%TEMP%\signal-launch.log`; if the launch fails the console
+window prints that log and waits for a key press. Closing the minimised
+"dev server" console stops the server.
 
 ### Available Commands
 
