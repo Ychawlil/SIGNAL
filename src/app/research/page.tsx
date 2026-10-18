@@ -17,7 +17,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { CATEGORIES, TOPIC_NAMES } from "@/lib/constants";
 import { categoryToTopics } from "@/lib/topics";
-import type { CategoryId, ConfidenceLevel, TopicId } from "@/lib/types";
+import type { CategoryId, TopicId } from "@/lib/types";
 import type { AnalyzedArticleRow } from "@/lib/server/analysis/store";
 import { cn } from "@/lib/utils";
 
@@ -33,14 +33,6 @@ function kindOf(item: AnalyzedArticleRow): Exclude<KindFilter, "all"> {
   if (item.provider === "arxiv" || item.provider === "arxiv-rss") return "paper";
   if (item.provider === "github") return "open-source";
   return "report";
-}
-
-function confidenceLabel(level: ConfidenceLevel): string {
-  return level === "high"
-    ? "证据充分"
-    : level === "medium"
-      ? "部分验证"
-      : "待验证";
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -81,8 +73,7 @@ function ResearchCard({ item }: { item: AnalyzedArticleRow }) {
             {item.title}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {item.sourceName} · 重要性 {analysis.importanceScore}/100 ·{" "}
-            {confidenceLabel(analysis.confidenceLevel)}
+            {item.sourceName} · 重要性 {analysis.importanceScore}/100
           </p>
         </div>
         <ChevronDown

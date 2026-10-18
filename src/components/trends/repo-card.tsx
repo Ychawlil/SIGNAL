@@ -55,7 +55,7 @@ export function RepoCard({ repo }: { repo: RisingRepo }) {
         </div>
         <div className="flex shrink-0 items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            <Star className="h-3.5 w-3.5 text-warning" />
+            <Star className="h-3.5 w-3.5 text-muted-accent" />
             {repo.stars}
           </span>
           <span className="inline-flex items-center gap-1">

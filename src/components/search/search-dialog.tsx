@@ -16,7 +16,7 @@ import { CATEGORY_MAP } from "@/lib/constants";
 import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
-import { ConfidenceBadge, ImportanceMeter } from "@/components/items/meta";
+import { ImportanceMeter } from "@/components/items/meta";
 import { EmptyState } from "@/components/ui/empty-state";
 
 interface SearchContextValue {
@@ -184,7 +184,6 @@ function SearchDialog({
                         <span>{CATEGORY_MAP[item.category]?.shortLabel}</span>
                         <TimeAgo iso={item.publishedAt} />
                         <ImportanceMeter score={item.importanceScore} />
-                        <ConfidenceBadge level={item.confidenceLevel} />
                       </div>
                     </div>
                     <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-accent" />

@@ -35,15 +35,15 @@ describe("analyzer", () => {
     expect(result.furtherReading.length).toBeGreaterThan(0);
   });
 
-  it("separates importance and confidence as independent scores", () => {
+  it("scores importance only and exposes no credibility score", () => {
     const result = analyzeArticle(article());
     expect(result.importanceScore).toBeGreaterThanOrEqual(0);
     expect(result.importanceScore).toBeLessThanOrEqual(100);
-    expect(result.confidenceScore).toBeGreaterThanOrEqual(0);
-    expect(result.confidenceScore).toBeLessThanOrEqual(100);
-    expect(["high", "medium", "low"]).toContain(result.confidenceLevel);
     expect(result.importanceFactors).toHaveProperty("relevance");
-    expect(result.confidenceFactors).toHaveProperty("sourceType");
+    // Credibility is intentionally not modelled; the field must not exist.
+    expect(result).not.toHaveProperty("confidenceScore");
+    expect(result).not.toHaveProperty("confidenceLevel");
+    expect(result).not.toHaveProperty("confidenceFactors");
   });
 
   it("does not classify an ordinary paper as a model release", () => {

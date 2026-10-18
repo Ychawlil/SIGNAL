@@ -1,14 +1,22 @@
 import "server-only";
 import type { AnalyzedArticleRow } from "./store";
-import type {
-  BriefingEvidenceSummary,
-  BriefingItem,
-  BriefingSection,
-  BriefingTheme,
-  DailyBriefing,
+import {
+  BRIEFING_SCHEMA_VERSION,
+  type BriefingItem,
+  type BriefingSection,
+  type BriefingSourceMix,
+  type BriefingTheme,
+  type DailyBriefing,
 } from "./types";
 
 const MIN_IMPORTANCE = 45;
+/** Selection window: only the last 24 hours of published content. */
+const WINDOW_HOURS = 24;
+/**
+ * Default briefing size when the caller does not specify the user's
+ * "daily signal count". Matches the editorial 3–5 rule.
+ */
+export const DEFAULT_BRIEFING_ITEMS = 5;
 
 const SECTION_DEFS: { key: BriefingSection["key"]; title: string }[] = [
   { key: "top", title: "今日最值得关注的进展" },
@@ -46,16 +54,7 @@ function toItem(article: AnalyzedArticleRow): BriefingItem {
     oneLineSummary: article.analysis.oneLineSummary,
     keyChange: article.analysis.keyChange,
     importanceScore: article.analysis.importanceScore,
-    confidenceScore: article.analysis.confidenceScore,
-    confidenceLevel: article.analysis.confidenceLevel,
   };
-}
-
-function freshnessBonus(publishedAt: string, now: Date): number {
-  const ageHours = (now.getTime() - new Date(publishedAt).getTime()) / 3600000;
-  if (ageHours >= 0 && ageHours <= 24) return 12;
-  if (ageHours <= 72) return 6;
-  return 0;
 }
 
 /**
@@ -69,11 +68,33 @@ function identityKey(article: AnalyzedArticleRow): string {
   return title || article.url.toLowerCase();
 }
 
+/** Hard ceiling for the briefing size, matching the Settings control. */
+export const MAX_BRIEFING_ITEMS = 30;
+const MIN_BRIEFING_ITEMS = 1;
+
+export function clampBriefingItems(value: unknown): number {
+  const parsed = typeof value === "string" ? Number(value) : value;
+  if (typeof parsed !== "number" || !Number.isFinite(parsed)) {
+    return DEFAULT_BRIEFING_ITEMS;
+  }
+  return Math.min(
+    MAX_BRIEFING_ITEMS,
+    Math.max(MIN_BRIEFING_ITEMS, Math.round(parsed)),
+  );
+}
+
+export interface BriefingOptions {
+  /** Maximum number of items across all sections (the daily signal count). */
+  maxItems?: number;
+}
+
 export function generateBriefing(
   articles: AnalyzedArticleRow[],
   now = new Date(),
+  options: BriefingOptions = {},
 ): DailyBriefing {
-  const cutoff = now.getTime() - 7 * 86400000;
+  const maxItems = clampBriefingItems(options.maxItems ?? DEFAULT_BRIEFING_ITEMS);
+  const cutoff = now.getTime() - WINDOW_HOURS * 3600000;
   const seen = new Set<string>();
 
   const candidates = articles
@@ -88,12 +109,16 @@ export function generateBriefing(
     .map((article) => ({
       article,
       section: sectionFor(article),
-      score:
-        article.analysis.importanceScore +
-        freshnessBonus(article.publishedAt, now),
     }))
     .filter((c) => c.section !== null)
-    .sort((a, b) => b.score - a.score)
+    // Inside a single 24h window freshness is no longer a differentiator,
+    // so ranking is pure importance, then most recent first.
+    .sort(
+      (a, b) =>
+        b.article.analysis.importanceScore - a.article.analysis.importanceScore ||
+        new Date(b.article.publishedAt).getTime() -
+          new Date(a.article.publishedAt).getTime(),
+    )
     .filter((c) => {
       const key = identityKey(c.article);
       if (seen.has(key)) return false;
@@ -103,40 +128,57 @@ export function generateBriefing(
 
   const used = new Set<number>();
   const sections: BriefingSection[] = [];
+  const titles = new Map(SECTION_DEFS.map((def) => [def.key, def.title]));
+
+  const addToSection = (key: BriefingSection["key"], article: AnalyzedArticleRow) => {
+    used.add(article.id);
+    const existing = sections.find((section) => section.key === key);
+    if (existing) {
+      existing.items.push(toItem(article));
+      return;
+    }
+    sections.push({ key, title: titles.get(key) ?? key, items: [toItem(article)] });
+  };
+
+  const addFirstFor = (key: BriefingSection["key"]): boolean => {
+    const match = candidates.find(
+      (c) => c.section === key && !used.has(c.article.id),
+    );
+    if (!match) return false;
+    addToSection(key, match.article);
+    return true;
+  };
 
   // "top" is the single highest-scoring item regardless of section.
-  const top = candidates[0];
-  if (top) {
-    used.add(top.article.id);
-    sections.push({
-      key: "top",
-      title: SECTION_DEFS[0].title,
-      items: [toItem(top.article)],
-    });
+  if (candidates[0] && maxItems > 0) {
+    addToSection("top", candidates[0].article);
   }
 
+  // One representative per main section, as long as the budget allows.
   for (const def of SECTION_DEFS.slice(1, 5)) {
-    const match = candidates.find(
-      (c) => c.section === def.key && !used.has(c.article.id),
-    );
-    if (match) {
-      used.add(match.article.id);
-      sections.push({ key: def.key, title: def.title, items: [toItem(match.article)] });
+    if (used.size >= maxItems) break;
+    addFirstFor(def.key);
+  }
+
+  // Optional "other science" only when a slot is free and a section is missing.
+  if (used.size < maxItems && sections.length < 5) {
+    addFirstFor("other-science");
+  }
+
+  // Remaining budget: keep adding the next most important items, even if a
+  // section already has one. This is what makes the "daily signal count"
+  // setting meaningful for counts above one-per-section.
+  if (used.size < maxItems) {
+    for (const candidate of candidates) {
+      if (used.size >= maxItems) break;
+      if (used.has(candidate.article.id)) continue;
+      const key = candidate.section;
+      if (!key) continue;
+      addToSection(key, candidate.article);
     }
   }
 
-  // Optional "other science" only when there is still room and quality.
-  if (sections.length < 5) {
-    const match = candidates.find(
-      (c) => c.section === "other-science" && !used.has(c.article.id),
-    );
-    if (match) {
-      used.add(match.article.id);
-      sections.push({ key: "other-science", title: SECTION_DEFS[5].title, items: [toItem(match.article)] });
-    }
-  }
-
-  const count = sections.reduce((sum, s) => sum + s.items.length, 0);
+  const count = used.size;
   const reduced = count < 3;
 
   const selected = sections.flatMap((section) =>
@@ -144,19 +186,17 @@ export function generateBriefing(
   );
 
   const keyThemes = buildKeyThemes(selected);
-  const evidence = {
-    high: selected.filter((entry) => entry.item.confidenceLevel === "high").length,
-    medium: selected.filter((entry) => entry.item.confidenceLevel === "medium").length,
-    low: selected.filter((entry) => entry.item.confidenceLevel === "low").length,
-  };
+  const sourceMix = buildSourceMix(selected);
 
   const date = now.toISOString().slice(0, 10);
-  const intro = count === 0
-    ? "过去 7 天内没有达到质量阈值的情报，今日简报不凑数。"
-    : `基于过去 24 小时的新进展并回补 7 天内的重要成果，共精选 ${count} 条。`;
-  const digest = buildDigest(sections, selected.length, evidence);
+  const intro =
+    count === 0
+      ? "过去 24 小时内没有达到重要性阈值的情报，今日简报不凑数。"
+      : `仅统计过去 24 小时内发布、重要性 ≥ ${MIN_IMPORTANCE} 的情报，共精选 ${count} 条。`;
+  const digest = buildDigest(sections, selected.length, sourceMix);
 
   return {
+    version: BRIEFING_SCHEMA_VERSION,
     date,
     generatedAt: now.toISOString(),
     count,
@@ -165,9 +205,22 @@ export function generateBriefing(
     reduced,
     keyThemes,
     digest,
-    evidence,
-    window: { freshHours: 24, backfillDays: 7 },
+    sourceMix,
+    windowHours: WINDOW_HOURS,
+    maxItems,
   };
+}
+
+function buildSourceMix(
+  selected: { item: BriefingItem; section: string }[],
+): BriefingSourceMix[] {
+  const counts = new Map<string, number>();
+  for (const { item } of selected) {
+    counts.set(item.sourceName, (counts.get(item.sourceName) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([sourceName, count]) => ({ sourceName, count }))
+    .sort((a, b) => b.count - a.count || a.sourceName.localeCompare(b.sourceName));
 }
 
 /* ------------------------------------------------------------------ */
@@ -270,10 +323,10 @@ function joinSentences(list: string[]): string {
 function buildDigest(
   sections: BriefingSection[],
   count: number,
-  evidence: BriefingEvidenceSummary,
+  sourceMix: BriefingSourceMix[],
 ): string {
   if (count === 0) {
-    return "今日没有达到精选阈值的情报。为避免用低质量内容填满版面，本节保持为空；可稍后在设置页重新同步数据源。";
+    return "过去 24 小时内没有达到重要性阈值的情报。为避免用低质量内容填满版面，本节保持为空；可稍后在设置页重新同步数据源。";
   }
 
   const sentences: string[] = [];
@@ -298,13 +351,12 @@ function buildDigest(
     );
   }
 
-  const untrusted = evidence.low;
-  sentences.push(
-    evidence.high + evidence.medium + untrusted === 0
-      ? "证据状态尚未评估，阅读时请回到原始来源核对。"
-      : `证据状态：${evidence.high} 条高可信、${evidence.medium} 条部分验证${
-          untrusted > 0 ? `、${untrusted} 条待验证` : ""
-        }；重要性与可信度独立评估，热度不等于可信。`,
-  );
+  if (sourceMix.length > 0) {
+    sentences.push(
+      `来源构成：${sourceMix
+        .map((entry) => `${entry.sourceName} ${entry.count} 条`)
+        .join("、")}。`,
+    );
+  }
 
-  return joinSentences(sentences);}
+  return joinSentences(sentences);}

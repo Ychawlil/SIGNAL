@@ -4,7 +4,7 @@ import { NavLinks } from "./nav-links";
 
 export function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-border bg-background lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-border bg-background/80 backdrop-blur-md lg:flex">
       <div className="px-5 pb-4 pt-6">
         <Brand />
       </div>

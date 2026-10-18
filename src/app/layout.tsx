@@ -4,6 +4,7 @@ import { AppProviders } from "@/components/providers";
 import { SearchProvider } from "@/components/search/search-dialog";
 import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
+import { RandomBackground } from '@/components/random-background'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full">
         <AppProviders>
+          <RandomBackground />
           <SearchProvider>
             <AppShell>{children}</AppShell>
           </SearchProvider>

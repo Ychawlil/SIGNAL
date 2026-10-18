@@ -15,7 +15,7 @@ export function Topbar({ onOpenMobileNav }: TopbarProps) {
   const { openSearch } = useSearch();
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
       <Button
         variant="ghost"
         size="icon"

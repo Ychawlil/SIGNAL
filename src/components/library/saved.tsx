@@ -19,12 +19,6 @@ import { cn } from "@/lib/utils";
 
 type StatusFilter = "all" | SaveStatus;
 
-function confidenceClass(level: string | null): string {
-  if (level === "high") return "bg-accent-soft text-accent";
-  if (level === "medium") return "bg-warning-soft text-warning";
-  return "bg-panel-secondary text-muted-foreground";
-}
-
 function SavedItemCard({
   item,
   collections,
@@ -83,11 +77,6 @@ function SavedItemCard({
             <span className="text-muted-foreground">
               {item.article.sourceName} · {item.article.publishedAt.slice(0, 10)}
             </span>
-            {item.confidenceLevel && (
-              <Badge className={cn("font-mono uppercase tracking-wide", confidenceClass(item.confidenceLevel))}>
-                {item.confidenceLevel}
-              </Badge>
-            )}
             {item.importanceScore !== null && (
               <span className="font-mono tabular-nums text-muted-foreground">
                 imp {item.importanceScore}

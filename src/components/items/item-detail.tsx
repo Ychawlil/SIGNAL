@@ -11,7 +11,6 @@ import { formatDateTime } from "@/lib/utils";
 import { TimeAgo } from "@/components/live-time";
 import {
   CategoryBadge,
-  ConfidenceBadge,
   ImportanceMeter,
 } from "./meta";
 
@@ -54,7 +53,6 @@ export function ItemDetail({ item }: ItemDetailProps) {
 
         <div className="mt-4 flex items-center gap-4">
           <ImportanceMeter score={item.importanceScore} />
-          <ConfidenceBadge level={item.confidenceLevel} withLabel />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -9,41 +9,39 @@
 
 :root {
   /* Light theme — quiet, paper-like editorial */
-  --background: #f5f6f2;
-  --panel: #ffffff;
-  --panel-secondary: #eceee8;
-  --foreground: #161a15;
-  --muted-foreground: #5c655a;
-  --border: #dfe3d9;
-  --border-strong: #c8cec0;
-  --accent: #5c7a17;
+  --background: #f5f5f3;
+  --panel: rgb(255 255 255 / 0.88);
+  --panel-secondary: rgb(236 236 234 / 0.85);
+  --foreground: #161616;
+  --muted-foreground: #5f5f5f;
+  --border: #e0e0dd;
+  --border-strong: #c9c9c5;
+  --accent: #161616;
   --accent-foreground: #ffffff;
-  --accent-soft: #eef3df;
-  --muted-accent: #6b7f74;
+  --accent-soft: rgba(0, 0, 0, 0.05);
+  --muted-accent: #737373;
   --warning: #a76e24;
   --warning-soft: #f7ecd8;
   --danger: #b33a3a;
-  --grid-line: rgba(22, 26, 21, 0.05);
-  --overlay: rgba(22, 26, 21, 0.55);
+  --overlay: rgba(0, 0, 0, 0.55);
 }
 
 .dark {
   /* Dark theme — research terminal */
-  --background: #101210;
-  --panel: #171a17;
-  --panel-secondary: #1d211d;
-  --foreground: #e8eae4;
-  --muted-foreground: #a1a79d;
-  --border: #30362f;
-  --border-strong: #414940;
-  --accent: #c3f36b;
-  --accent-foreground: #101210;
-  --accent-soft: rgba(195, 243, 107, 0.09);
-  --muted-accent: #82958a;
+  --background: #111111;
+  --panel: rgb(23 23 23 / 0.88);
+  --panel-secondary: rgb(30 30 30 / 0.85);
+  --foreground: #eaeaea;
+  --muted-foreground: #a3a3a3;
+  --border: #333333;
+  --border-strong: #454545;
+  --accent: #f4f4f4;
+  --accent-foreground: #101010;
+  --accent-soft: rgba(255, 255, 255, 0.12);
+  --muted-accent: #8f8f8f;
   --warning: #e7b66d;
   --warning-soft: rgba(231, 182, 109, 0.1);
   --danger: #e27777;
-  --grid-line: rgba(232, 234, 228, 0.045);
   --overlay: rgba(0, 0, 0, 0.6);
 }
 
@@ -113,13 +111,6 @@ body {
 /* Editorial helpers */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-}
-
-/* Subtle grid backdrop for the app canvas */
-.grid-backdrop {
-  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 32px 32px;
 }
 
 /* Drawer / overlay entrances */

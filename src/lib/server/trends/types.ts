@@ -79,7 +79,6 @@ export interface ResearcherSignal {
   category: string;
   publishedAt: string;
   summary: string;
-  confidenceLevel: string;
 }
 
 export interface EmergingTopic {

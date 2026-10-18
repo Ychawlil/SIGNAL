@@ -1,7 +1,6 @@
 import type {
   Category,
   CategoryId,
-  ConfidenceLevel,
   SortKey,
   TopicId,
   TrackingStatus,
@@ -37,19 +36,9 @@ export const TOPIC_NAMES: Record<TopicId, string> = {
   "ai-systems": "AI for Systems",
 };
 
-export const CONFIDENCE_META: Record<
-  ConfidenceLevel,
-  { label: string; description: string }
-> = {
-  high: { label: "High confidence", description: "多个来源交叉验证，证据充分" },
-  medium: { label: "Medium confidence", description: "单一可靠来源或部分验证" },
-  low: { label: "Low confidence", description: "早期信号，证据有限，待验证" },
-};
-
 export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "importance", label: "Importance" },
   { value: "newest", label: "Newest first" },
-  { value: "confidence", label: "Confidence" },
 ];
 
 export const TRACKING_META: Record<TrackingStatus, { label: string; hint: string }> = {

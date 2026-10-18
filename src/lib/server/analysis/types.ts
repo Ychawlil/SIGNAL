@@ -1,6 +1,6 @@
 import type { StoredArticle } from "../types";
 
-/** Independent importance-vs-confidence scoring output. */
+/** Importance scoring output (0–100), summed from five weighted factors. */
 export interface AnalysisFactors {
   /** Relevance to tracked focus areas (0–30). */
   relevance: number;
@@ -12,19 +12,6 @@ export interface AnalysisFactors {
   verifiability: number;
   /** Personal learning value (0–15). */
   learning: number;
-}
-
-export interface ConfidenceFactors {
-  /** Source type credibility (0–30). */
-  sourceType: number;
-  /** Method transparency (0–25). */
-  methodTransparency: number;
-  /** Experiment / benchmark quality (0–25). */
-  experimentQuality: number;
-  /** Independent reproduction signals (0–10). */
-  independentReproduction: number;
-  /** Evidence completeness (0–10). */
-  evidenceCompleteness: number;
 }
 
 export type EvidenceBasis = "none" | "vendor" | "independent" | "mixed";
@@ -54,9 +41,6 @@ export interface AnalysisResult {
   furtherReading: FurtherReadingRef[];
   importanceScore: number;
   importanceFactors: AnalysisFactors;
-  confidenceScore: number;
-  confidenceLevel: "high" | "medium" | "low";
-  confidenceFactors: ConfidenceFactors;
   evidenceBasis: EvidenceBasis;
   isModelRelease: boolean;
   modelFamily: string | null;
@@ -104,8 +88,6 @@ export interface BriefingItem {
   oneLineSummary: string;
   keyChange: string;
   importanceScore: number;
-  confidenceScore: number;
-  confidenceLevel: "high" | "medium" | "low";
 }
 
 export interface BriefingSection {
@@ -128,13 +110,17 @@ export interface BriefingTheme {
   count: number;
 }
 
-export interface BriefingEvidenceSummary {
-  high: number;
-  medium: number;
-  low: number;
+export interface BriefingSourceMix {
+  sourceName: string;
+  count: number;
 }
 
+/** Bumped whenever the payload shape changes, to invalidate the day cache. */
+export const BRIEFING_SCHEMA_VERSION = 3;
+
 export interface DailyBriefing {
+  /** Payload shape version — see BRIEFING_SCHEMA_VERSION. */
+  version: number;
   date: string;
   generatedAt: string;
   count: number;
@@ -146,10 +132,12 @@ export interface DailyBriefing {
   keyThemes: BriefingTheme[];
   /** Short editorial digest built from the selected items (section A). */
   digest: string;
-  /** Confidence split of the selected items (section A). */
-  evidence: BriefingEvidenceSummary;
-  /** Coverage window actually used for selection. */
-  window: { freshHours: number; backfillDays: number };
+  /** Which sources contributed the selected items (section A). */
+  sourceMix: BriefingSourceMix[];
+  /** Selection window actually used, in hours. */
+  windowHours: number;
+  /** Item cap that produced this briefing (the daily signal count). */
+  maxItems: number;
 }
 
 /** Pluggable analysis engine (rule-based now, LLM later). */
@@ -157,5 +145,8 @@ export interface AnalysisEngine {
   id: string;
   available(): boolean;
   availabilityMessage(): string;
-  analyze(article: StoredArticle): Promise<AnalysisResult>;
+  analyze(
+    article: StoredArticle,
+    weights?: Record<string, number>,
+  ): Promise<AnalysisResult>;
 }

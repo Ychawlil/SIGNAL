@@ -6,12 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import type { AnalyzedArticleRow } from "@/lib/server/analysis/store";
 import { cn } from "@/lib/utils";
 
-function confidenceClass(level: "high" | "medium" | "low"): string {
-  if (level === "high") return "bg-accent-soft text-accent";
-  if (level === "medium") return "bg-warning-soft text-warning";
-  return "bg-panel-secondary text-muted-foreground";
-}
-
 function FactorBar({ label, value, max }: { label: string; value: number; max: number }) {
   return (
     <div className="flex items-center gap-2">
@@ -64,15 +58,6 @@ function AnalyzedRow({ item }: { item: AnalyzedArticleRow }) {
                 {a.importanceScore}
               </span>
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              confidence
-              <span className="font-mono text-sm tabular-nums text-foreground">
-                {a.confidenceScore}
-              </span>
-              <Badge className={cn("font-mono uppercase tracking-wide", confidenceClass(a.confidenceLevel))}>
-                {a.confidenceLevel}
-              </Badge>
-            </span>
             <Badge variant="muted" className="font-mono uppercase tracking-wide">
               {a.evidenceBasis}
             </Badge>
@@ -88,30 +73,16 @@ function AnalyzedRow({ item }: { item: AnalyzedArticleRow }) {
 
       {open && (
         <div className="fade-in border-t border-border px-4 pb-4 pt-3">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                Importance factors
-              </p>
-              <div className="mt-2 flex flex-col gap-2">
-                <FactorBar label="Relevance" value={a.importanceFactors.relevance} max={30} />
-                <FactorBar label="Novelty" value={a.importanceFactors.novelty} max={20} />
-                <FactorBar label="Impact" value={a.importanceFactors.impact} max={20} />
-                <FactorBar label="Verifiability" value={a.importanceFactors.verifiability} max={15} />
-                <FactorBar label="Learning value" value={a.importanceFactors.learning} max={15} />
-              </div>
-            </div>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                Confidence factors
-              </p>
-              <div className="mt-2 flex flex-col gap-2">
-                <FactorBar label="Source type" value={a.confidenceFactors.sourceType} max={30} />
-                <FactorBar label="Method" value={a.confidenceFactors.methodTransparency} max={25} />
-                <FactorBar label="Experiments" value={a.confidenceFactors.experimentQuality} max={25} />
-                <FactorBar label="Independent" value={a.confidenceFactors.independentReproduction} max={10} />
-                <FactorBar label="Completeness" value={a.confidenceFactors.evidenceCompleteness} max={10} />
-              </div>
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
+              Importance factors
+            </p>
+            <div className="mt-2 flex max-w-md flex-col gap-2">
+              <FactorBar label="Relevance" value={a.importanceFactors.relevance} max={30} />
+              <FactorBar label="Novelty" value={a.importanceFactors.novelty} max={20} />
+              <FactorBar label="Impact" value={a.importanceFactors.impact} max={20} />
+              <FactorBar label="Verifiability" value={a.importanceFactors.verifiability} max={15} />
+              <FactorBar label="Learning value" value={a.importanceFactors.learning} max={15} />
             </div>
           </div>
 
@@ -173,7 +144,7 @@ export function ImportanceView({ items }: { items: AnalyzedArticleRow[] }) {
   return (
     <div className="flex flex-col gap-2.5">
       <p className="text-sm leading-6 text-muted-foreground">
-        重要性与可信度独立评估：热度高不等于可信，来源自述（vendor）与独立验证（independent）被分开标记。
+        按重要性排序，展开可看到五项重要性因子。来源自述（vendor）与独立验证（independent）分开标记，作为阅读时的参考，而不是评分。
       </p>
       {items.map((item) => (
         <AnalyzedRow key={item.id} item={item} />

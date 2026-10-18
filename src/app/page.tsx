@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { CATEGORIES } from "@/lib/constants";
+import { useSettings } from "@/components/providers";
 import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import { categoryToTopics } from "@/lib/topics";
 import type {
@@ -36,7 +37,6 @@ function fromBriefingItem(item: BriefingItem): IntelligenceItem {
     sourceUrl: item.url,
     publishedAt: item.publishedAt,
     importanceScore: item.importanceScore,
-    confidenceLevel: item.confidenceLevel,
     keyChange: item.keyChange || "—",
     whyItMatters: "—",
     limitations: "—",
@@ -134,9 +134,9 @@ function dedupeSections(sections: BriefingSectionView[]): BriefingSectionView[] 
     .filter((section) => section.items.length > 0);
 }
 
-async function fetchHomeData(): Promise<HomeData> {
+async function fetchHomeData(count: number): Promise<HomeData> {
   const [briefing, signalsData, stats, trends] = await Promise.all([
-    fetchJson<DailyBriefing>("/api/briefing"),
+    fetchJson<DailyBriefing>(`/api/briefing?count=${count}`),
     fetchJson<{ items: SignalRecord[] }>("/api/signals?pageSize=100&sort=importance"),
     fetchJson<SignalStats>("/api/signals/stats"),
     fetchJson<TrendsReport>("/api/trends?range=7d"),
@@ -150,6 +150,8 @@ async function fetchHomeData(): Promise<HomeData> {
 }
 
 export default function Home() {
+  const { settings } = useSettings();
+  const dailyCount = settings.dailySignalCount;
   const [selected, setSelected] = useState<IntelligenceItem | null>(null);
   const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
   const [signals, setSignals] = useState<IntelligenceItem[]>([]);
@@ -165,7 +167,7 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    fetchHomeData()
+    fetchHomeData(dailyCount)
       .then((data) => {
         if (!active) return;
         setBriefing(data.briefing);
@@ -183,12 +185,12 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [dailyCount]);
 
   const retry = () => {
     setLoading(true);
     setError(null);
-    fetchHomeData()
+    fetchHomeData(dailyCount)
       .then((data) => {
         setBriefing(data.briefing);
         setSignals(data.signals);
@@ -218,7 +220,7 @@ export default function Home() {
         throw new Error(summary.error ?? `更新失败 (${response.status})`);
       }
 
-      const data = await fetchHomeData();
+      const data = await fetchHomeData(dailyCount);
       setBriefing(data.briefing);
       setSignals(data.signals);
       setStats(data.stats);
@@ -266,7 +268,7 @@ export default function Home() {
     } finally {
       setUpdating(false);
     }
-  }, []);
+  }, [dailyCount]);
 
   const signalById = new Map(signals.map((s) => [Number(s.id), s]));
 
@@ -304,7 +306,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-2">
             {briefing && (
               <Badge variant="accent" className="gap-1.5 px-2 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground/80" />
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                 {briefing.count} item{briefing.count === 1 ? "" : "s"}
               </Badge>
             )}
@@ -366,10 +368,10 @@ export default function Home() {
             }
             selectedCount={briefing?.count ?? 0}
             freshCount={stats?.last24h ?? 0}
-            windowCount={stats?.last7d ?? 0}
+            windowCount={stats?.last24h ?? 0}
             totalCount={stats?.total ?? 0}
             themes={briefing?.keyThemes ?? []}
-            evidence={briefing?.evidence ?? { high: 0, medium: 0, low: 0 }}
+            sourceMix={briefing?.sourceMix ?? []}
             reduced={briefing?.reduced ?? false}
           />
           <SignalOfDay item={signalOfDay} onOpen={setSelected} />

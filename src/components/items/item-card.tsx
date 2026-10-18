@@ -3,7 +3,7 @@
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
 import { FavoriteButton } from "./favorite-button";
-import { CategoryBadge, ConfidenceBadge, ImportanceMeter } from "./meta";
+import { CategoryBadge, ImportanceMeter } from "./meta";
 import { useLibrary } from "@/components/providers";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +56,6 @@ export function ItemCard({ item, onOpen }: ItemCardProps) {
 
       <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
         <ImportanceMeter score={item.importanceScore} />
-        <ConfidenceBadge level={item.confidenceLevel} />
       </div>
     </article>
   );

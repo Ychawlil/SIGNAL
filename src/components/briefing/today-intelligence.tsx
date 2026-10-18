@@ -16,14 +16,14 @@ interface TodayIntelligenceProps {
   intro: string;
   /** Items selected for today's briefing. */
   selectedCount: number;
-  /** New articles published in the last 24h. */
+  /** Items published in the last 24h. */
   freshCount: number;
-  /** Items inside the 7-day backfill window. */
+  /** Same 24h window, as seen by the analyzed pool. */
   windowCount: number;
   /** Total articles stored. */
   totalCount: number;
   themes: KeyThemeChip[];
-  evidence: { high: number; medium: number; low: number };
+  sourceMix: { sourceName: string; count: number }[];
   reduced: boolean;
 }
 
@@ -75,7 +75,7 @@ export function TodayIntelligence({
   windowCount,
   totalCount,
   themes,
-  evidence,
+  sourceMix,
   reduced,
 }: TodayIntelligenceProps) {
   return (
@@ -123,10 +123,10 @@ export function TodayIntelligence({
                 hint="最近 24 小时内发布、已入库的情报"
               />
               <Stat
-                label="7 天窗口"
+                label="24h 窗口"
                 value={windowCount}
                 suffix="stored"
-                hint="过去 7 天内发布、已入库的情报（简报回补窗口）"
+                hint="过去 24 小时内发布、已入库的情报（简报选取范围）"
               />
               <Stat
                 label="库内总量"
@@ -144,8 +144,12 @@ export function TodayIntelligence({
                 重点主题 · Key themes
               </p>
               <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                证据 · 高 {evidence.high} / 部分 {evidence.medium} / 待验证{" "}
-                {evidence.low}
+                来源 ·{" "}
+                {sourceMix.length === 0
+                  ? "—"
+                  : sourceMix
+                      .map((entry) => `${entry.sourceName} ${entry.count}`)
+                      .join(" · ")}
               </span>
             </div>
             {themes.length === 0 ? (
@@ -178,7 +182,7 @@ export function TodayIntelligence({
               </ul>
             )}
             <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-              主题按入选情报的实际分布排序，点击可在 Explore 中查看对应条目。一条情报可归入多个主题，因此主题计数之和可能大于精选条数；证据分级来自分析层独立评估。
+              主题按入选情报的实际分布排序，点击可在 Explore 中查看对应条目。一条情报可归入多个主题，因此主题计数之和可能大于精选条数。
             </p>
           </div>
         </CardContent>

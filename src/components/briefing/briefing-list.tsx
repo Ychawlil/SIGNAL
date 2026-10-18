@@ -33,7 +33,7 @@ export function BriefingList({ sections, onOpen }: BriefingListProps) {
       />
       {count === 0 ? (
         <p className="rounded-lg border border-border bg-panel p-5 text-sm text-muted-foreground">
-          今天没有达到精选阈值的情报，简报不凑数。
+          过去 24 小时内没有达到重要性阈值的情报，简报不凑数。
         </p>
       ) : (
         <div className="flex flex-col gap-6">

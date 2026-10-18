@@ -25,13 +25,11 @@ export type TopicId =
   | "ai-math"
   | "ai-systems";
 
-export type ConfidenceLevel = "high" | "medium" | "low";
-
 export type ReadStatus = "unread" | "read";
 
 export type TrackingStatus = "active" | "watching" | "paused";
 
-export type SortKey = "importance" | "newest" | "confidence";
+export type SortKey = "importance" | "newest";
 
 export interface Category {
   id: CategoryId;
@@ -61,7 +59,6 @@ export interface IntelligenceItem {
   sourceUrl: string;
   publishedAt: string; // ISO 8601
   importanceScore: number; // 0–100
-  confidenceLevel: ConfidenceLevel;
   keyChange: string;
   whyItMatters: string;
   limitations: string;

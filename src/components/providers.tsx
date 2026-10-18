@@ -11,6 +11,7 @@ import {
 import { STORAGE_KEYS, TOPIC_NAMES } from "@/lib/constants";
 import { usePersistentState } from "@/lib/hooks";
 import { TOPICS } from "@/lib/topics";
+import { DEFAULT_FOCUS_WEIGHTS } from "@/lib/focus-weights";
 import type {
   AppSettings,
   LibraryState,
@@ -241,24 +242,14 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-const DEFAULT_WEIGHTS: Record<TopicId, number> = {
-  "llm-reasoning": 85,
-  "ai-coding": 80,
-  "ai-agents": 75,
-  "world-models": 80,
-  vla: 90,
-  "robot-learning": 85,
-  "ai-math": 80,
-  "ai-systems": 70,
-};
-
 const DEFAULT_SETTINGS: AppSettings = {
   dailySignalCount: 10,
   defaultSort: "importance",
   focusAreas: TOPICS.map((t) => ({
     id: t.id,
     label: TOPIC_NAMES[t.id],
-    weight: DEFAULT_WEIGHTS[t.id],
+    // Shared with the server so scoring and UI agree on the defaults.
+    weight: DEFAULT_FOCUS_WEIGHTS[t.id],
   })),
   dataStatus: "never-synced",
   lastSyncedAt: null,

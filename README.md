@@ -45,13 +45,27 @@ All primary pages — Daily Briefing, Explore, Research, Topics, Analysis, Trend
 Library — render real records collected from the connected sources. No sample or
 placeholder content is served in production.
 
+### Preferences
+
+| Preference | Effect |
+|---|---|
+| Focus-area weights | Stored server-side (`focus_weights`) and used by the importance calculation |
+| Daily signal count | Passed to `/api/briefing?count=` and caps the number of briefing items |
+| Default sorting | Used as the initial Explore sort order until you change it in the view |
+| Theme | Light/dark, stored per browser |
+
+Preferences other than focus-area weights live in `localStorage` because SIGNAL has no
+account system yet.
+
 ## ✦ How It Works
 
 SIGNAL collects, analyzes, and organizes technology intelligence into a searchable personal knowledge base.
 
 1. **Collect** — Retrieve articles and research from arXiv RSS/API, GitHub, RSS feeds, and Hacker News.
 2. **Analyze** — Extract key changes, evidence, limitations, and potential impact.
-3. **Prioritize** — Evaluate relevance, technical merit, evidence quality, and emerging trends.
+3. **Prioritize** — Score importance from focus-area relevance (driven by your saved
+   weights), novelty, potential impact, verifiability and learning value. Relevance is
+   recomputed immediately when weights are saved.
 4. **Track** — Save discoveries, organize research, and review developments over time.
 
 Original sources remain accessible. Official claims, preprints, peer-reviewed research, and independent verification are treated as distinct forms of evidence.

@@ -126,7 +126,7 @@ export function ResearcherSignalList({ signals }: { signals: ResearcherSignal[] 
                 {signal.authors.slice(0, 4).join(", ")}
                 {signal.authors.length > 4 ? ` 等 ${signal.authors.length} 位作者` : ""}
                 {" · "}
-                {signal.publishedAt.slice(0, 10)} · confidence {signal.confidenceLevel}
+                {signal.publishedAt.slice(0, 10)}
               </p>
               <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-muted-foreground">
                 {signal.summary}
@@ -181,7 +181,7 @@ export function EarlySignalList({ signals }: { signals: EarlySignal[] }) {
       <EmptyState
         icon={<AlertTriangle />}
         title="暂无待验证的早期信号"
-        description="当出现高热度但证据不足，或高重要性但低可信度的条目时，会列在这里。"
+        description="当出现高热度但证据不足，或重要性高但证据仅来自厂商自述的条目时，会列在这里。"
       />
     );
   }

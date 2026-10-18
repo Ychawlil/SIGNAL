@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Database, Moon, Save, ShieldCheck, Sun } from "lucide-react";
 import { useSettings, useTheme } from "@/components/providers";
 import { SourcePanel } from "@/components/settings/source-panel";
@@ -42,26 +42,65 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useSettings();
 
-  const [draftWeights, setDraftWeights] = useState<Record<TopicId, number>>(() =>
-    Object.fromEntries(settings.focusAreas.map((area) => [area.id, area.weight])) as Record<
-      TopicId,
-      number
-    >,
-  );
-  const [saved, setSaved] = useState(false);
+  // Weights live on the server because they drive importance scoring.
+  const [weights, setWeights] = useState<Record<TopicId, number> | null>(null);
+  const [draftWeights, setDraftWeights] = useState<Record<TopicId, number> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [weightError, setWeightError] = useState<string | null>(null);
+  const [rescored, setRescored] = useState<number | null>(null);
 
-  const weightsDirty = settings.focusAreas.some(
-    (area) => (draftWeights[area.id] ?? area.weight) !== area.weight,
-  );
+  useEffect(() => {
+    let active = true;
+    fetch("/api/settings/weights", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data: { weights: Record<TopicId, number> }) => {
+        if (!active) return;
+        setWeights(data.weights);
+        setDraftWeights(data.weights);
+      })
+      .catch((err: unknown) => {
+        if (active) setWeightError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const weightsDirty =
+    weights !== null &&
+    draftWeights !== null &&
+    settings.focusAreas.some(
+      (area) => (draftWeights[area.id] ?? 0) !== (weights[area.id] ?? 0),
+    );
 
   const saveWeights = () => {
-    updateSettings({
-      focusAreas: settings.focusAreas.map((area) => ({
-        ...area,
-        weight: draftWeights[area.id] ?? area.weight,
-      })),
-    });
-    setSaved(true);
+    if (!draftWeights) return;
+    setSaving(true);
+    setWeightError(null);
+    setNotice(null);
+    fetch("/api/settings/weights", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ weights: draftWeights }),
+    })
+      .then(async (r) => {
+        const body = (await r.json().catch(() => ({}))) as {
+          weights?: Record<TopicId, number>;
+          rescored?: number;
+          error?: string;
+        };
+        if (!r.ok) throw new Error(body.error ?? String(r.status));
+        const next = body.weights ?? draftWeights;
+        setWeights(next);
+        setDraftWeights(next);
+        setRescored(body.rescored ?? 0);
+        setNotice("??????????????????");
+      })
+      .catch((err: unknown) => {
+        setWeightError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => setSaving(false));
   };
 
   return (
@@ -74,7 +113,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          主题、关注领域与数据偏好。设置保存在本地浏览器，暂无真实账号系统。
+          主题、关注领域与数据偏好。关注权重保存在服务端并直接参与重要性计算；其余偏好保存在本地浏览器，暂无真实账号系统。
         </p>
       </header>
 
@@ -111,7 +150,10 @@ export default function SettingsPage() {
           </div>
         </SettingSection>
 
-        <SettingSection title="Daily signal count" description="每日简报最多展示的情报条数。">
+        <SettingSection
+          title="Daily signal count"
+          description="每日简报最多展示的情报条数，首页与分析页都会按此数量生成简报。"
+        >
           <div className="flex items-center gap-3">
             <Input
               type="number"
@@ -135,53 +177,77 @@ export default function SettingsPage() {
 
       <SettingSection
         title="Focus areas & weights"
-        description="调整各主题的关注权重，用于未来个性化排序（本阶段仅保存配置）。"
+        description="权重直接参与重要性计算：每个类别取该类别下最高的主题权重，换算为 0–30 的相关性因子。保存后会立即重算全部已分析情报的分数。"
       >
-        <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          {settings.focusAreas.map((area) => (
-            <li key={area.id} className="flex items-center gap-3">
-              <span className="w-36 shrink-0 truncate text-sm text-foreground">
-                {area.label}
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={draftWeights[area.id] ?? area.weight}
-                onChange={(e) =>
-                  setDraftWeights((prev) => ({
-                    ...prev,
-                    [area.id]: Number(e.target.value),
-                  }))
-                }
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-panel-secondary accent-accent"
-                aria-label={`${area.label} weight`}
-              />
-              <span className="w-9 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                {draftWeights[area.id] ?? area.weight}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-5 flex items-center justify-end gap-3 border-t border-border pt-4">
-          <span className="text-xs text-muted-foreground">
-            {weightsDirty ? "有未保存的修改" : saved ? "已保存到本地浏览器" : ""}
-          </span>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={saveWeights}
-            disabled={!weightsDirty}
-          >
-            <Save className="h-3.5 w-3.5" />
-            保存
-          </Button>
-        </div>
+        {draftWeights === null ? (
+          <p className="text-sm text-muted-foreground">
+            {weightError ? `加载失败：${weightError}` : "加载权重…"}
+          </p>
+        ) : (
+          <>
+            <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+              {settings.focusAreas.map((area) => {
+                const value = draftWeights[area.id] ?? 0;
+                return (
+                  <li key={area.id} className="flex items-center gap-3">
+                    <span className="w-36 shrink-0 truncate text-sm text-foreground">
+                      {area.label}
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={value}
+                      onChange={(e) =>
+                        setDraftWeights((prev) =>
+                          prev ? { ...prev, [area.id]: Number(e.target.value) } : prev,
+                        )
+                      }
+                      className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-panel-secondary accent-accent"
+                      aria-label={`${area.label} weight`}
+                    />
+                    <span className="w-16 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                      {value}
+                      <span className="ml-1 text-muted-accent">
+                        →{Math.round((value / 100) * 30)}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <p className="text-xs leading-5 text-muted-foreground">
+                右侧小字是该权重换算出的相关性因子（满分 30）。
+                {rescored !== null
+                  ? `本次已重算 ${rescored} 条分析。`
+                  : weightsDirty
+                    ? "有未保存的修改。"
+                    : notice ?? ""}
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={saveWeights}
+                disabled={!weightsDirty || saving}
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "保存中…" : "保存并重算"}
+              </Button>
+            </div>
+          </>
+        )}
+        {weightError && draftWeights !== null && (
+          <p className="mt-3 text-xs leading-5 text-danger">保存失败：{weightError}</p>
+        )}
       </SettingSection>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SettingSection title="Default sorting" description="Explore 列表的默认排序方式。">
+        <SettingSection
+          title="Default sorting"
+          description="Explore 列表打开时使用的排序方式；在 Explore 内手动切换会覆盖它。"
+        >
           <Select
             value={settings.defaultSort}
             onChange={(e) => updateSettings({ defaultSort: e.target.value as SortKey })}

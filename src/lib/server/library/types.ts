@@ -11,8 +11,6 @@ export interface SavedItemView {
   notes: string;
   tags: string[];
   importanceScore: number | null;
-  confidenceScore: number | null;
-  confidenceLevel: string | null;
   modelFamily: string | null;
   keyChange: string | null;
   limitations: string | null;

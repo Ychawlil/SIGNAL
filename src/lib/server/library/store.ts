@@ -125,7 +125,7 @@ export function listSavedItems(filters: SavedFilters = {}): SavedItemView[] {
   const rows = database
     .prepare(
       `SELECT a.*, s.saved_at, s.updated_at, s.status, s.notes, s.tags,
-              an.importance_score, an.confidence_score, an.confidence_level,
+              an.importance_score,
               an.model_family, an.key_change, an.limitations
        FROM saved_items s
        JOIN articles a ON a.id = s.article_id
@@ -143,8 +143,6 @@ export function listSavedItems(filters: SavedFilters = {}): SavedItemView[] {
     notes: String(row.notes),
     tags: parseJson(String(row.tags ?? "[]"), [] as string[]),
     importanceScore: row.importance_score === null ? null : Number(row.importance_score),
-    confidenceScore: row.confidence_score === null ? null : Number(row.confidence_score),
-    confidenceLevel: row.confidence_level ? String(row.confidence_level) : null,
     modelFamily: row.model_family ? String(row.model_family) : null,
     keyChange: row.key_change ? String(row.key_change) : null,
     limitations: row.limitations ? String(row.limitations) : null,

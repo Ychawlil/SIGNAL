@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
-import { useLibrary } from "@/components/providers";
+import { useLibrary, useSettings } from "@/components/providers";
 import { CATEGORIES, SORT_OPTIONS, TOPIC_NAMES } from "@/lib/constants";
 import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import type { CategoryId, IntelligenceItem, SortKey, TopicId } from "@/lib/types";
@@ -79,6 +79,7 @@ async function requestSignals(
 
 export function ExploreClient() {
   const { isFavorite } = useLibrary();
+  const { settings } = useSettings();
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
@@ -97,7 +98,10 @@ export function ExploreClient() {
       : "all";
   });
   const [source, setSource] = useState<string>("all");
-  const [sort, setSort] = useState<SortKey>("newest");
+  // `null` means "follow the default sort saved in Settings"; once the user
+  // picks a sort in this view we stop overriding their choice.
+  const [explicitSort, setExplicitSort] = useState<SortKey | null>(null);
+  const sort = explicitSort ?? settings.defaultSort;
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("list");
 
@@ -319,7 +323,7 @@ export function ExploreClient() {
           <Select
             value={sort}
             onChange={(e) => {
-              setSort(e.target.value as SortKey);
+              setExplicitSort(e.target.value as SortKey);
               setLoading(true);
             }}
             aria-label="Sort by"

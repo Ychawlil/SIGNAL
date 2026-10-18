@@ -3,7 +3,7 @@
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
 import { FavoriteButton } from "./favorite-button";
-import { CategoryBadge, ConfidenceBadge, ImportanceMeter } from "./meta";
+import { CategoryBadge, ImportanceMeter } from "./meta";
 import { useLibrary } from "@/components/providers";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +53,6 @@ export function ItemRow({ item, onOpen, showImportance = true }: ItemRowProps) {
 
           <div className="mt-2 flex items-center gap-4">
             {showImportance && <ImportanceMeter score={item.importanceScore} />}
-            <ConfidenceBadge level={item.confidenceLevel} />
           </div>
         </div>
 

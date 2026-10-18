@@ -1,6 +1,5 @@
 import type {
   CategoryId,
-  ConfidenceLevel,
   IntelligenceItem,
 } from "./types";
 import { categoryToTopics } from "./topics";
@@ -20,8 +19,6 @@ export interface SignalRecord {
   authors: string[];
   tags: string[];
   importanceScore: number;
-  confidenceScore: number;
-  confidenceLevel: ConfidenceLevel;
   keyChange: string;
   differences: string;
   evidence: string;
@@ -53,7 +50,6 @@ export function toIntelligenceItem(record: SignalRecord): IntelligenceItem {
     sourceUrl: record.url,
     publishedAt: record.publishedAt,
     importanceScore: record.importanceScore,
-    confidenceLevel: record.confidenceLevel,
     keyChange: record.keyChange || record.differences || "—",
     whyItMatters: record.impact || "—",
     limitations: record.limitations || "—",

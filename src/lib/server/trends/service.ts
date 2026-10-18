@@ -40,7 +40,6 @@ interface ArticleRow {
   publishedAt: string;
   authors: string[];
   tags: string[];
-  confidenceLevel: string | null;
   importanceScore: number | null;
   evidenceBasis: string | null;
 }
@@ -51,7 +50,7 @@ function listArticles(where: string, params: (string | number)[], limit: number)
     .prepare(
       `SELECT a.id, a.title, a.summary, a.url, a.source_name, a.category,
               a.published_at, a.authors, a.tags,
-              an.confidence_level, an.importance_score, an.evidence_basis
+              an.importance_score, an.evidence_basis
        FROM articles a
        LEFT JOIN analyses an ON an.article_id = a.id
        ${where}
@@ -69,7 +68,6 @@ function listArticles(where: string, params: (string | number)[], limit: number)
     publishedAt: String(row.published_at),
     authors: parseJson(String(row.authors ?? "[]"), [] as string[]),
     tags: parseJson(String(row.tags ?? "[]"), [] as string[]),
-    confidenceLevel: row.confidence_level ? String(row.confidence_level) : null,
     importanceScore: row.importance_score === null ? null : Number(row.importance_score),
     evidenceBasis: row.evidence_basis ? String(row.evidence_basis) : null,
   }));
@@ -180,7 +178,6 @@ function buildResearcherSignals(rangeDays: number): ResearcherSignal[] {
       category: article.category,
       publishedAt: article.publishedAt,
       summary: article.summary.slice(0, 240),
-      confidenceLevel: article.confidenceLevel ?? "unknown",
     }),
   );
 }
@@ -272,7 +269,7 @@ function buildEarlySignals(rangeDays: number): EarlySignal[] {
     if (
       article.importanceScore !== null &&
       article.importanceScore >= 70 &&
-      (article.confidenceLevel === "low" || article.evidenceBasis === "none" || article.evidenceBasis === "vendor")
+      (article.evidenceBasis === "none" || article.evidenceBasis === "vendor")
     ) {
       signals.push({
         kind: "article",

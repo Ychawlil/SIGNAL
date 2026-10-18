@@ -1,7 +1,12 @@
 import "server-only";
 import { getDb } from "../db";
+import { getFocusWeights } from "../settings";
 import { getAnalysisEngine } from "./analyzer";
-import { generateBriefing } from "./briefing";
+import {
+  DEFAULT_BRIEFING_ITEMS,
+  clampBriefingItems,
+  generateBriefing,
+} from "./briefing";
 import { extractModelInfo } from "./model-extractor";
 import {
   countAnalyzed,
@@ -15,6 +20,7 @@ import {
 } from "./store";
 import type { StoredArticle } from "../types";
 import type { DailyBriefing, ModelFamily } from "./types";
+import { BRIEFING_SCHEMA_VERSION } from "./types";
 
 function getArticleById(id: number): StoredArticle | null {
   const database = getDb();
@@ -58,6 +64,9 @@ export interface AnalysisRunSummary {
 /** Analyze all articles that have not been analyzed yet. Idempotent. */
 export async function ensureAnalysis(force = false): Promise<AnalysisRunSummary> {
   const engine = getAnalysisEngine();
+  // Loaded once per run: every article in this batch is scored with the
+  // user's current focus weights.
+  const weights = getFocusWeights();
   const ids = force
     ? (() => {
         const database = getDb();
@@ -79,7 +88,7 @@ export async function ensureAnalysis(force = false): Promise<AnalysisRunSummary>
     const article = getArticleById(id);
     if (!article) continue;
 
-    const result = await engine.analyze(article);
+    const result = await engine.analyze(article, weights);
     saveAnalysis(result);
     analyzed += 1;
 
@@ -125,23 +134,31 @@ export function getModelRegistry(): ModelFamily[] {
   return listModelFamilies();
 }
 
-export function getDailyBriefing(options: { force?: boolean } = {}): DailyBriefing {
+export function getDailyBriefing(
+  options: { force?: boolean; maxItems?: number } = {},
+): DailyBriefing {
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
+  const maxItems = clampBriefingItems(options.maxItems ?? DEFAULT_BRIEFING_ITEMS);
   if (!options.force) {
     const cached = getBriefing(date);
-    // Older payloads predate section A fields — regenerate instead of
-    // serving a partially empty overview.
-    if (cached && Array.isArray(cached.keyThemes) && typeof cached.digest === "string") {
+    // Cached payloads from an older schema (confidence metric, 7-day window)
+    // are ignored, and a cache built for a different item count is rebuilt so
+    // the "daily signal count" setting is actually honoured.
+    if (
+      cached &&
+      cached.version === BRIEFING_SCHEMA_VERSION &&
+      cached.maxItems === maxItems
+    ) {
       return cached;
     }
   }
 
-  // One extra day of slack so the SQL pre-filter can never drop an item that
-  // generateBriefing would still consider at the 7-day boundary.
-  const since = new Date(now.getTime() - 8 * 86400000).toISOString();
+  // One hour of slack so the SQL pre-filter can never drop an item that
+  // generateBriefing would still consider at the 24h boundary.
+  const since = new Date(now.getTime() - 25 * 3600000).toISOString();
   const items = listAnalysesSince(since);
-  const briefing = generateBriefing(items, now);
+  const briefing = generateBriefing(items, now, { maxItems });
   const articleIds = briefing.sections.flatMap((s) => s.items.map((i) => i.articleId));
   saveBriefing(date, briefing, articleIds);
   return briefing;

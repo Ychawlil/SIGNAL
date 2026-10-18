@@ -272,7 +272,7 @@ export default function TrendsPage() {
             <SectionHeader
               index="E"
               title="Early Signals — 待验证"
-              description="高热度但证据不足，或高重要性但低可信度的线索，需独立验证后再下结论。"
+              description="高热度但证据不足，或重要性高但证据仅来自厂商自述的线索，需独立验证后再下结论。"
             />
             <EarlySignalList signals={report.earlySignals} />
           </section>

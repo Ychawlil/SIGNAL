@@ -5,7 +5,7 @@ import type { IntelligenceItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ConfidenceBadge, ImportanceMeter } from "@/components/items/meta";
+import { ImportanceMeter } from "@/components/items/meta";
 import { SectionHeading } from "./section-heading";
 
 interface SignalOfDayProps {
@@ -25,7 +25,7 @@ export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
         />
         <Card>
           <CardContent className="p-5 text-sm text-muted-foreground">
-            今天没有达到精选阈值的情报。
+            过去 24 小时内没有达到重要性阈值的情报。
           </CardContent>
         </Card>
       </section>
@@ -46,7 +46,6 @@ export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
             <Badge variant="accent" className="font-mono uppercase tracking-wide">
               Signal of the Day
             </Badge>
-            <ConfidenceBadge level={item.confidenceLevel} withLabel />
           </div>
 
           <h3 className="mt-3 text-xl font-semibold leading-8 text-foreground">
@@ -56,7 +55,7 @@ export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
             {item.summary}
           </p>
 
-          <dl className="mt-5 grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3">
+          <dl className="mt-5 grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2">
             <div className="bg-panel p-4">
               <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
                 Core change
@@ -71,18 +70,6 @@ export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
               </dt>
               <dd className="mt-1.5 text-sm leading-6 text-foreground">
                 {item.whyItMatters}
-              </dd>
-            </div>
-            <div className="bg-panel p-4">
-              <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                Evidence status
-              </dt>
-              <dd className="mt-1.5 text-sm leading-6 text-foreground">
-                {item.confidenceLevel === "high"
-                  ? "多来源交叉验证，证据充分。"
-                  : item.confidenceLevel === "medium"
-                    ? "单一可靠来源，部分验证。"
-                    : "早期信号，待验证。"}
               </dd>
             </div>
           </dl>

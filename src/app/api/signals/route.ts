@@ -28,7 +28,7 @@ const VALID_TOPICS: TopicId[] = [
   "ai-math",
   "ai-systems",
 ];
-const VALID_SORTS = ["newest", "importance", "confidence"] as const;
+const VALID_SORTS = ["newest", "importance"] as const;
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;

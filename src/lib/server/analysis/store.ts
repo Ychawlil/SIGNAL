@@ -28,9 +28,9 @@ export function saveAnalysis(result: AnalysisResult): void {
       `INSERT INTO analyses (
          article_id, one_liner, key_change, differences, evidence, limitations,
          impact, personal_relevance, further_reading, importance_score,
-         importance_factors, confidence_score, confidence_factors, confidence_level,
-         evidence_basis, is_model_release, model_family, analyzed_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         importance_factors, evidence_basis, is_model_release, model_family,
+         analyzed_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(article_id) DO UPDATE SET
          one_liner = excluded.one_liner,
          key_change = excluded.key_change,
@@ -42,9 +42,6 @@ export function saveAnalysis(result: AnalysisResult): void {
          further_reading = excluded.further_reading,
          importance_score = excluded.importance_score,
          importance_factors = excluded.importance_factors,
-         confidence_score = excluded.confidence_score,
-         confidence_factors = excluded.confidence_factors,
-         confidence_level = excluded.confidence_level,
          evidence_basis = excluded.evidence_basis,
          is_model_release = excluded.is_model_release,
          model_family = excluded.model_family,
@@ -62,9 +59,6 @@ export function saveAnalysis(result: AnalysisResult): void {
       JSON.stringify(result.furtherReading),
       result.importanceScore,
       JSON.stringify(result.importanceFactors),
-      result.confidenceScore,
-      JSON.stringify(result.confidenceFactors),
-      result.confidenceLevel,
       result.evidenceBasis,
       result.isModelRelease ? 1 : 0,
       result.modelFamily,
@@ -128,8 +122,7 @@ export function listAnalyses(options: {
     .prepare(
       `SELECT a.*, an.one_liner, an.key_change, an.differences, an.evidence,
               an.limitations, an.impact, an.personal_relevance, an.further_reading,
-              an.importance_score, an.importance_factors, an.confidence_score,
-              an.confidence_factors, an.confidence_level, an.evidence_basis,
+              an.importance_score, an.importance_factors, an.evidence_basis,
               an.is_model_release, an.model_family, an.analyzed_at
        FROM analyses an
        JOIN articles a ON a.id = an.article_id
@@ -158,8 +151,7 @@ export function listAnalysesSince(sinceIso: string): AnalyzedArticleRow[] {
     .prepare(
       `SELECT a.*, an.one_liner, an.key_change, an.differences, an.evidence,
               an.limitations, an.impact, an.personal_relevance, an.further_reading,
-              an.importance_score, an.importance_factors, an.confidence_score,
-              an.confidence_factors, an.confidence_level, an.evidence_basis,
+              an.importance_score, an.importance_factors, an.evidence_basis,
               an.is_model_release, an.model_family, an.analyzed_at
        FROM analyses an
        JOIN articles a ON a.id = an.article_id
@@ -203,15 +195,6 @@ function rowToAnalyzedArticle(row: Record<string, unknown>): AnalyzedArticleRow 
         impact: 0,
         verifiability: 0,
         learning: 0,
-      }),
-      confidenceScore: Number(row.confidence_score),
-      confidenceLevel: row.confidence_level as AnalysisResult["confidenceLevel"],
-      confidenceFactors: parseJson(String(row.confidence_factors ?? "{}"), {
-        sourceType: 0,
-        methodTransparency: 0,
-        experimentQuality: 0,
-        independentReproduction: 0,
-        evidenceCompleteness: 0,
       }),
       evidenceBasis: row.evidence_basis as AnalysisResult["evidenceBasis"],
       isModelRelease: Number(row.is_model_release) === 1,

@@ -1,5 +1,5 @@
-import { CATEGORY_MAP, CONFIDENCE_META } from "@/lib/constants";
-import type { CategoryId, ConfidenceLevel } from "@/lib/types";
+import { CATEGORY_MAP } from "@/lib/constants";
+import type { CategoryId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -9,31 +9,6 @@ export function CategoryBadge({ category }: { category: CategoryId }) {
     <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
       {meta?.shortLabel ?? category}
     </Badge>
-  );
-}
-
-export function ConfidenceBadge({
-  level,
-  withLabel = false,
-}: {
-  level: ConfidenceLevel;
-  withLabel?: boolean;
-}) {
-  const meta = CONFIDENCE_META[level];
-  const dot = {
-    high: "bg-accent",
-    medium: "bg-warning",
-    low: "bg-muted-accent",
-  }[level];
-
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
-      title={meta.description}
-    >
-      <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
-      {withLabel ? meta.label : level}
-    </span>
   );
 }
 

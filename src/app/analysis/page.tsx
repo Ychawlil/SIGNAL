@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Segmented } from "@/components/ui/segmented";
+import { useSettings } from "@/components/providers";
 import type { AnalyzedArticleRow } from "@/lib/server/analysis/store";
 import type { DailyBriefing, ModelFamily } from "@/lib/server/analysis/types";
 
@@ -22,8 +23,8 @@ interface RunSummary {
   totalAnalyzed: number;
 }
 
-function fetchBriefing(): Promise<DailyBriefing> {
-  return fetch("/api/briefing", { cache: "no-store" }).then((r) => {
+function fetchBriefing(count: number): Promise<DailyBriefing> {
+  return fetch(`/api/briefing?count=${count}`, { cache: "no-store" }).then((r) => {
     if (!r.ok) throw new Error(`Briefing request failed (${r.status})`);
     return r.json();
   });
@@ -47,11 +48,15 @@ function fetchAnalyses(): Promise<AnalyzedArticleRow[]> {
     .then((d: { items: AnalyzedArticleRow[] }) => d.items);
 }
 
-function fetchAll(): Promise<[DailyBriefing, ModelFamily[], AnalyzedArticleRow[]]> {
-  return Promise.all([fetchBriefing(), fetchModels(), fetchAnalyses()]);
+function fetchAll(
+  count: number,
+): Promise<[DailyBriefing, ModelFamily[], AnalyzedArticleRow[]]> {
+  return Promise.all([fetchBriefing(count), fetchModels(), fetchAnalyses()]);
 }
 
 export default function AnalysisPage() {
+  const { settings } = useSettings();
+  const dailyCount = settings.dailySignalCount;
   const [tab, setTab] = useState<Tab>("briefing");
   const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
   const [families, setFamilies] = useState<ModelFamily[] | null>(null);
@@ -63,7 +68,7 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     let active = true;
-    fetchAll()
+    fetchAll(dailyCount)
       .then(([b, m, a]) => {
         if (active) {
           setBriefing(b);
@@ -83,7 +88,7 @@ export default function AnalysisPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [dailyCount]);
 
   const onRun = useCallback(async () => {
     setSyncing(true);
@@ -96,7 +101,7 @@ export default function AnalysisPage() {
       });
       const summary = (await response.json()) as RunSummary;
       setRunSummary(summary);
-      const [b, m, a] = await fetchAll();
+      const [b, m, a] = await fetchAll(dailyCount);
       setBriefing(b);
       setFamilies(m);
       setAnalyses(a);
@@ -106,7 +111,7 @@ export default function AnalysisPage() {
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [dailyCount]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -119,7 +124,7 @@ export default function AnalysisPage() {
             Analysis
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            对已采集的真实情报做结构化分析：一句话摘要、关键变化、证据、局限、影响与个人相关性，并独立评估重要性与可信度。
+            对已采集的真实情报做结构化分析：一句话摘要、关键变化、证据、局限、影响与个人相关性，并按重要性排序。
           </p>
         </div>
         <Button variant="primary" size="sm" onClick={onRun} disabled={syncing}>
@@ -152,7 +157,7 @@ export default function AnalysisPage() {
           size="md"
           options={[
             { value: "briefing", label: "Daily briefing" },
-            { value: "importance", label: "Importance vs confidence" },
+            { value: "importance", label: "Importance ranking" },
             { value: "models", label: "Model tracking" },
           ]}
         />

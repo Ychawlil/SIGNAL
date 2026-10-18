@@ -8,7 +8,7 @@ type Size = "sm" | "md" | "icon" | "icon-sm";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-accent text-accent-foreground hover:opacity-90 disabled:opacity-50",
+    "bg-black/55 text-white border border-white/10 backdrop-blur-sm hover:bg-black/70 disabled:opacity-50",
   secondary:
     "bg-panel-secondary text-foreground border border-border hover:border-border-strong disabled:opacity-50",
   ghost:

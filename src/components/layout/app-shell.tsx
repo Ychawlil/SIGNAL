@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [openSearch]);
 
   return (
-    <div className="grid-backdrop min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Sidebar />
       <div className="lg:pl-[240px]">
         <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />

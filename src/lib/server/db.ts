@@ -78,9 +78,6 @@ CREATE TABLE IF NOT EXISTS analyses (
   further_reading TEXT NOT NULL DEFAULT '[]',
   importance_score INTEGER NOT NULL,
   importance_factors TEXT NOT NULL DEFAULT '{}',
-  confidence_score INTEGER NOT NULL,
-  confidence_factors TEXT NOT NULL DEFAULT '{}',
-  confidence_level TEXT NOT NULL,
   evidence_basis TEXT NOT NULL DEFAULT 'none',
   is_model_release INTEGER NOT NULL DEFAULT 0,
   model_family TEXT,
@@ -225,11 +222,40 @@ CREATE TABLE IF NOT EXISTS task_locks (
   lease_until TEXT NOT NULL
 );
 
+-- User-managed focus weights. These drive the relevance factor of importance.
+CREATE TABLE IF NOT EXISTS focus_weights (
+  topic TEXT PRIMARY KEY,
+  weight INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- Legacy category id migration: 'x-signals' -> 'signals'.
 UPDATE articles SET category = 'signals' WHERE category = 'x-signals';
 `;
 
 let db: DatabaseSync | null = null;
+
+/**
+ * Drops columns that were removed from the schema. They hold derived,
+ * recomputable values only, so no historical intelligence is lost.
+ */
+function dropLegacyColumns(database: DatabaseSync): void {
+  const columns = (
+    database.prepare(`SELECT name FROM pragma_table_info('analyses')`).all() as {
+      name: string;
+    }[]
+  ).map((row) => row.name);
+
+  for (const column of ["confidence_score", "confidence_factors", "confidence_level"]) {
+    if (!columns.includes(column)) continue;
+    try {
+      database.exec(`ALTER TABLE analyses DROP COLUMN ${column}`);
+    } catch {
+      // Older SQLite builds cannot drop columns; leaving it is harmless
+      // because nothing reads or writes it any more.
+    }
+  }
+}
 
 export function getDb(): DatabaseSync {
   if (db) return db;
@@ -241,6 +267,7 @@ export function getDb(): DatabaseSync {
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  dropLegacyColumns(db);
   return db;
 }
 

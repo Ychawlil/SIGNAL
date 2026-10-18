@@ -2,7 +2,7 @@ import "server-only";
 import { getDb } from "./db";
 import { TOPIC_CATEGORIES } from "@/lib/topics";
 import type { SignalRecord } from "@/lib/signals";
-import type { CategoryId, ConfidenceLevel, TopicId } from "@/lib/types";
+import type { CategoryId, TopicId } from "@/lib/types";
 import type { ProviderId } from "./types";
 
 export interface SignalQuery {
@@ -13,7 +13,7 @@ export interface SignalQuery {
   topic?: TopicId;
   source?: string;
   provider?: ProviderId;
-  sort?: "newest" | "importance" | "confidence";
+  sort?: "newest" | "importance";
 }
 
 const CATEGORY_IDS: CategoryId[] = [
@@ -31,7 +31,6 @@ const CATEGORY_IDS: CategoryId[] = [
 const SORT_SQL: Record<NonNullable<SignalQuery["sort"]>, string> = {
   newest: "a.published_at DESC",
   importance: "COALESCE(an.importance_score, 0) DESC, a.published_at DESC",
-  confidence: "COALESCE(an.confidence_score, 0) DESC, a.published_at DESC",
 };
 
 const SELECT = `
@@ -40,7 +39,7 @@ const SELECT = `
          a.authors, a.tags, a.metrics,
          an.one_liner, an.key_change, an.differences, an.evidence,
          an.limitations, an.impact, an.personal_relevance, an.further_reading,
-         an.importance_score, an.confidence_score, an.confidence_level,
+         an.importance_score,
          an.is_model_release, an.model_family
   FROM articles a
   LEFT JOIN analyses an ON an.article_id = a.id
@@ -48,7 +47,6 @@ const SELECT = `
 
 function rowToSignal(row: Record<string, unknown>): SignalRecord {
   const importanceScore = row.importance_score == null ? 0 : Number(row.importance_score);
-  const confidenceScore = row.confidence_score == null ? 0 : Number(row.confidence_score);
   return {
     id: Number(row.id),
     title: String(row.title),
@@ -60,10 +58,6 @@ function rowToSignal(row: Record<string, unknown>): SignalRecord {
     authors: parseJson(String(row.authors ?? "[]"), [] as string[]),
     tags: parseJson(String(row.tags ?? "[]"), [] as string[]),
     importanceScore,
-    confidenceScore,
-    confidenceLevel:
-      (row.confidence_level as ConfidenceLevel) ??
-      (importanceScore >= 60 ? "medium" : "low"),
     keyChange: String(row.key_change ?? ""),
     differences: String(row.differences ?? ""),
     evidence: String(row.evidence ?? ""),

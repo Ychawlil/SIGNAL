@@ -4,13 +4,6 @@ import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { DailyBriefing } from "@/lib/server/analysis/types";
-import { cn } from "@/lib/utils";
-
-function confidenceClass(level: "high" | "medium" | "low"): string {
-  if (level === "high") return "bg-accent-soft text-accent";
-  if (level === "medium") return "bg-warning-soft text-warning";
-  return "bg-panel-secondary text-muted-foreground";
-}
 
 export function BriefingView({ briefing }: { briefing: DailyBriefing }) {
   return (
@@ -44,11 +37,8 @@ export function BriefingView({ briefing }: { briefing: DailyBriefing }) {
                     <Badge variant="outline" className="font-mono uppercase tracking-wide">
                       {item.category}
                     </Badge>
-                    <Badge className={cn("font-mono uppercase tracking-wide", confidenceClass(item.confidenceLevel))}>
-                      confidence {item.confidenceLevel}
-                    </Badge>
                     <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                      importance {item.importanceScore} / confidence {item.confidenceScore}
+                      importance {item.importanceScore}
                     </span>
                   </div>
                   <a
