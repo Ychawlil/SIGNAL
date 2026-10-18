@@ -182,12 +182,24 @@ interface TopicsContextValue extends TopicsState {
 const TopicsContext = createContext<TopicsContextValue | null>(null);
 
 const DEFAULT_TOPICS: TopicsState = {
-  subscribedIds: ["llm-reasoning", "ai-coding", "vla", "robot-learning"],
+  subscribedIds: ["llm-reasoning", "ai-coding", "physical-ai"],
 };
 
-const reviveTopics = (raw: TopicsState): TopicsState => ({
-  subscribedIds: raw.subscribedIds ?? [],
-});
+/** Topic ids that no longer exist, mapped to the topic that absorbed them. */
+const LEGACY_TOPIC_IDS: Record<string, TopicId> = {
+  vla: "physical-ai",
+  "robot-learning": "physical-ai",
+  "world-models": "physical-ai",
+};
+
+const reviveTopics = (raw: TopicsState): TopicsState => {
+  const seen = new Set<TopicId>();
+  for (const id of raw.subscribedIds ?? []) {
+    const mapped = LEGACY_TOPIC_IDS[id] ?? (id as TopicId);
+    seen.add(mapped);
+  }
+  return { subscribedIds: [...seen] };
+};
 
 export function TopicsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = usePersistentState<TopicsState>(
@@ -255,13 +267,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   lastSyncedAt: null,
 };
 
+/**
+ * Always rebuild the focus-area list from the current taxonomy so a stored
+ * snapshot cannot resurrect retired topic ids (vla / robot-learning /
+ * world-models) in the Settings UI.
+ */
 const reviveSettings = (raw: AppSettings): AppSettings => ({
   ...DEFAULT_SETTINGS,
   ...raw,
-  focusAreas:
-    raw.focusAreas && raw.focusAreas.length > 0
-      ? raw.focusAreas
-      : DEFAULT_SETTINGS.focusAreas,
+  focusAreas: DEFAULT_SETTINGS.focusAreas,
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {

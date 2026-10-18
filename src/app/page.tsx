@@ -38,53 +38,96 @@ function fromBriefingItem(item: BriefingItem): IntelligenceItem {
     publishedAt: item.publishedAt,
     importanceScore: item.importanceScore,
     keyChange: item.keyChange || "—",
-    whyItMatters: "—",
-    limitations: "—",
-    personalRelevance: "—",
+    whyItMatters: item.whyItMatters || "—",
+    limitations: item.limitations || "—",
+    personalRelevance: item.personalRelevance || "—",
     tags: [],
     topics: categoryToTopics(item.category as CategoryId),
     readingTimeMinutes: 1,
   };
 }
 
-function toWorthFollowing(trends: TrendsReport): WorthFollowingItem[] {
-  const repos: WorthFollowingItem[] = trends.risingRepos.slice(0, 3).map((repo) => ({
-    id: `repo:${repo.fullName}`,
-    name: repo.fullName,
-    kind: "repo",
-    description: repo.description || "—",
-    whyFollow: repo.compositeRationale || "复合评分靠前，值得持续跟踪。",
-    referenceUrl: repo.url,
-  }));
-  const models: WorthFollowingItem[] = trends.releases.slice(0, 3).map((release) => ({
-    id: `model:${release.id}`,
-    name: release.title,
-    kind: "model",
-    description: release.evalNote || `来源：${release.sourceName}`,
-    whyFollow: `声明来源：${release.claimOrigin}；基准 ${release.benchmarks.length} 项。`,
-    referenceUrl: release.url,
-  }));
-  return [...repos, ...models].slice(0, 6);
+/**
+ * Prefer the richer article record (tags, topics, reading time) when the
+ * article happens to be in the loaded slice, but never let it blank out the
+ * analysis text carried by the briefing payload itself.
+ */
+function mergeItem(
+  base: IntelligenceItem,
+  rich: IntelligenceItem | undefined,
+): IntelligenceItem {
+  if (!rich) return base;
+  const keep = (value: string, fallback: string) =>
+    value && value.trim() !== "" && value !== "—" ? value : fallback;
+  return {
+    ...base,
+    ...rich,
+    summary: keep(rich.summary, base.summary),
+    keyChange: keep(rich.keyChange, base.keyChange),
+    whyItMatters: keep(rich.whyItMatters, base.whyItMatters),
+    limitations: keep(rich.limitations, base.limitations),
+    personalRelevance: keep(rich.personalRelevance, base.personalRelevance),
+    tags: rich.tags.length > 0 ? rich.tags : base.tags,
+    topics: rich.topics.length > 0 ? rich.topics : base.topics,
+    readingTimeMinutes: rich.readingTimeMinutes || base.readingTimeMinutes,
+  };
+}
+
+/**
+ * Built from today's briefing first, so a manual update is reflected here
+ * immediately; the GitHub trend list only fills the remaining slots (and is
+ * static while collection is paused).
+ */
+function toWorthFollowing(
+  sections: BriefingSectionView[],
+  trends: TrendsReport | null,
+): WorthFollowingItem[] {
+  const kindFor = (item: IntelligenceItem): WorthFollowingItem["kind"] =>
+    item.category === "ai-models"
+      ? "model"
+      : item.sourceName.startsWith("GitHub")
+        ? "repo"
+        : "paper";
+
+  const fromBriefing: WorthFollowingItem[] = sections
+    .flatMap((section) => section.items)
+    // The highlight is already shown in section B.
+    .filter((item) => item.id !== sections.find((s) => s.key === "top")?.items[0]?.id)
+    .slice(0, 6)
+    .map((item) => ({
+      id: `briefing:${item.id}`,
+      name: item.title,
+      kind: kindFor(item),
+      description: item.summary || "—",
+      referenceUrl: item.sourceUrl,
+    }));
+
+  const seen = new Set(fromBriefing.map((item) => item.referenceUrl));
+  const fromTrends: WorthFollowingItem[] = (trends?.risingRepos ?? [])
+    .filter((repo) => !seen.has(repo.url))
+    .slice(0, 6)
+    .map((repo) => ({
+      id: `repo:${repo.fullName}`,
+      name: repo.fullName,
+      kind: "repo" as const,
+      description: repo.description || "—",
+      referenceUrl: repo.url,
+    }));
+
+  return [...fromBriefing, ...fromTrends].slice(0, 6);
 }
 
 function toWeeklyDirection(trends: TrendsReport): WeeklyDirectionItem[] {
-  const fromEmerging = trends.emergingTopics.slice(0, 3).map((topic, i) => ({
+  return trends.emergingTopics.slice(0, 3).map((topic, i) => ({
     id: `dir-topic-${i}`,
-    title: topic.topic,
+    title: topic.label,
     summary: `${topic.note}（窗口 ${topic.windowDays} 天）`,
-    openQuestions: [
-      "该趋势的可验证证据是否充分？",
-      "是否存在独立复现或第三方评测？",
-    ],
-    relatedSignalIds: [],
-  }));
-  if (fromEmerging.length > 0) return fromEmerging;
-
-  return trends.earlySignals.slice(0, 3).map((signal, i) => ({
-    id: `dir-signal-${i}`,
-    title: signal.title,
-    summary: signal.reason,
-    openQuestions: ["该信号是否已被独立验证？"],
+    // Only real caveats: derived from what the counts can and cannot support.
+    openQuestions: topic.reliable
+      ? [
+          `增长率基于上期 ${topic.previousCount} 条样本，仍需后续窗口确认是否持续。`,
+        ]
+      : ["只有出现次数，暂不能判断趋势方向。"],
     relatedSignalIds: [],
   }));
 }
@@ -111,10 +154,16 @@ interface RefreshResponse {
   };
   analyze: {
     status: "running" | "success" | "error" | "skipped";
+    selected: number;
+    baseline: number;
     analyzed: number;
+    skipped: number;
+    failed: number;
+    failedSample: string | null;
+    engine: string | null;
     error: string | null;
   };
-  briefing: { date: string; generatedAt: string; count: number };
+  briefing: { count: number | null };
 }
 
 /** Never render the same story twice, even if the payload contains duplicates. */
@@ -211,7 +260,9 @@ export default function Home() {
       const response = await fetch("/api/briefing/refresh", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
+        // The server selects today's briefing with the same item count the
+        // page is about to render, then analyzes only those items.
+        body: JSON.stringify({ count: dailyCount }),
       });
       const summary = (await response.json().catch(() => ({}))) as Partial<RefreshResponse> & {
         error?: string;
@@ -238,6 +289,9 @@ export default function Home() {
       } else if (summary.analyze?.status === "skipped") {
         problems.push("另一个分析任务正在运行，本次未重新分析");
       }
+      if (summary.analyze && summary.analyze.failed > 0) {
+        problems.push(`${summary.analyze.failed} 条分析未完成（已保留上一次结果）`);
+      }
 
       if (problems.length > 0) {
         setUpdateNotice({
@@ -256,8 +310,14 @@ export default function Home() {
       if (summary.sync && summary.sync.totalSkipped > 0) {
         parts.push(`跳过 ${summary.sync.totalSkipped} 条重复内容`);
       }
-      if (summary.analyze && summary.analyze.analyzed > 0) {
-        parts.push(`新分析 ${summary.analyze.analyzed} 条`);
+      if (summary.analyze) {
+        parts.push(`入选 ${summary.analyze.selected} 条`);
+        if (summary.analyze.analyzed > 0) {
+          parts.push(`新分析 ${summary.analyze.analyzed} 条`);
+        }
+        if (summary.analyze.skipped > 0) {
+          parts.push(`已有分析跳过 ${summary.analyze.skipped} 条`);
+        }
       }
       setUpdateNotice({ tone: "success", message: parts.join(" · ") });
     } catch (err) {
@@ -276,7 +336,9 @@ export default function Home() {
     (briefing?.sections ?? []).map((section) => ({
       key: section.key,
       title: section.title,
-      items: section.items.map((item) => signalById.get(item.articleId) ?? fromBriefingItem(item)),
+      items: section.items.map((item) =>
+        mergeItem(fromBriefingItem(item), signalById.get(item.articleId)),
+      ),
     })),
   );
 
@@ -288,7 +350,7 @@ export default function Home() {
     count: stats?.categoryCounts[cat.id] ?? 0,
   }));
 
-  const worthFollowing = trends ? toWorthFollowing(trends) : [];
+  const worthFollowing = toWorthFollowing(sections, trends);
   const weeklyDirection = trends ? toWeeklyDirection(trends) : [];
 
   return (
@@ -316,18 +378,13 @@ export default function Home() {
               onClick={manualUpdate}
               disabled={updating}
               aria-busy={updating}
-              title="立即采集新情报，并刷新今日简报与 Today's Intelligence"
+              title="立即采集新情报，并刷新今日简报"
             >
               <RefreshCw className={updating ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
               {updating ? "更新中…" : "手动更新"}
             </Button>
           </div>
         </div>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {briefing
-            ? `基于真实采集情报生成：过去 24 小时 ${stats?.last24h ?? 0} 条新进展，累计 ${stats?.total ?? 0} 条已入库。`
-            : "正在从真实数据源加载简报…"}
-        </p>
       </header>
 
       {updateNotice && (
@@ -358,14 +415,7 @@ export default function Home() {
       {!error && (
         <>
           <TodayIntelligence
-            digest={
-              briefing?.digest ??
-              "正在生成今日简报：导读、精选条数与重点主题会在真实数据加载完成后展示。"
-            }
-            intro={
-              briefing?.intro ??
-              "正在从真实数据源加载简报…"
-            }
+            digest={briefing?.digest ?? "—"}
             selectedCount={briefing?.count ?? 0}
             freshCount={stats?.last24h ?? 0}
             windowCount={stats?.last24h ?? 0}

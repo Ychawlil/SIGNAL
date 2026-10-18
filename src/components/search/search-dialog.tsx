@@ -150,9 +150,7 @@ function SearchDialog({
 
         <div className="max-h-[50vh] overflow-y-auto p-2">
           {query.trim() === "" ? (
-            <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              输入关键词，在已采集的真实情报中检索。
-            </p>
+            <p className="px-3 py-8 text-center text-sm text-muted-foreground">—</p>
           ) : loading ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
               检索中…

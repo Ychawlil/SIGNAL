@@ -1,6 +1,7 @@
 import "server-only";
 import { getDb } from "../db";
 import type { StoredArticle } from "../types";
+import { RULE_BASED_PLACEHOLDERS } from "./placeholders";
 import type {
   AnalysisResult,
   DailyBriefing,
@@ -21,7 +22,7 @@ function parseJson<T>(value: string | null, fallback: T): T {
    Analyses
    ============================================================ */
 
-export function saveAnalysis(result: AnalysisResult): void {
+export function saveAnalysis(result: AnalysisResult, engine = "rule-based"): void {
   const database = getDb();
   database
     .prepare(
@@ -29,8 +30,8 @@ export function saveAnalysis(result: AnalysisResult): void {
          article_id, one_liner, key_change, differences, evidence, limitations,
          impact, personal_relevance, further_reading, importance_score,
          importance_factors, evidence_basis, is_model_release, model_family,
-         analyzed_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         analyzed_at, engine
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(article_id) DO UPDATE SET
          one_liner = excluded.one_liner,
          key_change = excluded.key_change,
@@ -45,7 +46,8 @@ export function saveAnalysis(result: AnalysisResult): void {
          evidence_basis = excluded.evidence_basis,
          is_model_release = excluded.is_model_release,
          model_family = excluded.model_family,
-         analyzed_at = excluded.analyzed_at`,
+         analyzed_at = excluded.analyzed_at,
+         engine = excluded.engine`,
     )
     .run(
       result.articleId,
@@ -63,6 +65,7 @@ export function saveAnalysis(result: AnalysisResult): void {
       result.isModelRelease ? 1 : 0,
       result.modelFamily,
       result.analyzedAt,
+      engine,
     );
 }
 
@@ -78,6 +81,55 @@ export function listUnanalyzedArticleIds(limit = 500): number[] {
     )
     .all(limit) as { id: number }[];
   return rows.map((r) => Number(r.id));
+}
+
+/**
+ * Analyses that need to be (re)generated for the briefing window.
+ *
+ * Two cases qualify:
+ *  - `engine` is a concrete engine id that is not the one currently
+ *    configured (e.g. rows written by the rule engine before an LLM key was
+ *    added). `engine = ''` means a row predating the marker; those already
+ *    hold real text and are deliberately left alone.
+ *  - Any of the three briefing-facing fields is empty, so the page would
+ *    otherwise have to render a placeholder.
+ *
+ * Scoped to `sinceIso` so a manual refresh only pays for the 24h window
+ * instead of re-analyzing the whole archive.
+ */
+export function listStaleAnalysisArticleIds(
+  sinceIso: string,
+  engineId: string,
+  limit = 40,
+): number[] {
+  const database = getDb();
+  const marks = RULE_BASED_PLACEHOLDERS.map(() => "?").join(",");
+  const rows = database
+    .prepare(
+      `SELECT an.article_id FROM analyses an
+       JOIN articles a ON a.id = an.article_id
+       WHERE a.published_at >= ?
+         AND (
+           (an.engine <> '' AND an.engine <> ?)
+           OR TRIM(an.impact) = ''
+           OR TRIM(an.limitations) = ''
+           OR TRIM(an.personal_relevance) = ''
+           OR an.impact IN (${marks})
+           OR an.limitations IN (${marks})
+           OR an.personal_relevance IN (${marks})
+         )
+       ORDER BY an.importance_score DESC, a.published_at DESC
+       LIMIT ?`,
+    )
+    .all(
+      sinceIso,
+      engineId,
+      ...RULE_BASED_PLACEHOLDERS,
+      ...RULE_BASED_PLACEHOLDERS,
+      ...RULE_BASED_PLACEHOLDERS,
+      limit,
+    ) as { article_id: number }[];
+  return rows.map((r) => Number(r.article_id));
 }
 
 export function countAnalyzed(): number {
@@ -136,6 +188,61 @@ export function listAnalyses(options: {
     items: rows.map(rowToAnalyzedArticle),
     total: Number(totalRow.c),
   };
+}
+
+/**
+ * Every article published at or after `sinceIso`, whether or not it has an
+ * analysis yet.
+ *
+ * Briefing selection must happen *before* the (paid) LLM analysis, so the
+ * selection step needs the full candidate set, not just already-analyzed
+ * rows.
+ */
+export interface ArticleRowWithAnalysis {
+  article: StoredArticle;
+  analysis: AnalysisResult | null;
+  /** '' for rows written before the engine marker existed. */
+  engine: string;
+}
+
+export function listArticleRowsSince(sinceIso: string): ArticleRowWithAnalysis[] {
+  const database = getDb();
+  const rows = database
+    .prepare(
+      `SELECT a.*, an.one_liner, an.key_change, an.differences, an.evidence,
+              an.limitations, an.impact, an.personal_relevance, an.further_reading,
+              an.importance_score, an.importance_factors, an.evidence_basis,
+              an.is_model_release, an.model_family, an.analyzed_at, an.engine
+       FROM articles a
+       LEFT JOIN analyses an ON an.article_id = a.id
+       WHERE a.published_at >= ?
+       ORDER BY a.published_at DESC`,
+    )
+    .all(sinceIso) as Record<string, unknown>[];
+
+  return rows.map((row) => {
+    const full = rowToAnalyzedArticle(row);
+    const hasAnalysis = row.one_liner !== null && row.one_liner !== undefined;
+    return {
+      article: {
+        id: full.id,
+        provider: full.provider,
+        externalId: full.externalId,
+        title: full.title,
+        summary: full.summary,
+        url: full.url,
+        sourceName: full.sourceName,
+        category: full.category,
+        publishedAt: full.publishedAt,
+        fetchedAt: full.fetchedAt,
+        authors: full.authors,
+        tags: full.tags,
+        metrics: full.metrics,
+      },
+      analysis: hasAnalysis ? full.analysis : null,
+      engine: row.engine ? String(row.engine) : "",
+    };
+  });
 }
 
 /**

@@ -14,12 +14,7 @@ export function TopicDistribution({ counts, total }: TopicDistributionProps) {
 
   return (
     <section>
-      <SectionHeading
-        index="D"
-        label="Distribution"
-        title="Topic Distribution"
-        description="已采集真实情报在各主题上的分布。"
-      />
+      <SectionHeading index="D" label="Distribution" title="Topic Distribution" />
       <Card>
         <CardContent className="p-5">
           <ul className="flex flex-col gap-3">

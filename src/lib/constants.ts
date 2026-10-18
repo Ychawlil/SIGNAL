@@ -29,9 +29,7 @@ export const TOPIC_NAMES: Record<TopicId, string> = {
   "llm-reasoning": "LLM Reasoning",
   "ai-coding": "AI Coding",
   "ai-agents": "AI Agents",
-  "world-models": "World Models",
-  vla: "VLA",
-  "robot-learning": "Robot Learning",
+  "physical-ai": "Physical AI & Robotics",
   "ai-math": "AI for Mathematics",
   "ai-systems": "AI for Systems",
 };
@@ -67,4 +65,5 @@ export const STORAGE_KEYS = {
   library: "signal.library",
   topics: "signal.topics",
   settings: "signal.settings",
+  sidebar: "signal.sidebar",
 } as const;

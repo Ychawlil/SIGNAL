@@ -87,6 +87,12 @@ export interface BriefingItem {
   publishedAt: string;
   oneLineSummary: string;
   keyChange: string;
+  /** Why it matters (the analysis `impact` field). */
+  whyItMatters: string;
+  /** Known limitations and open questions. */
+  limitations: string;
+  /** Value for the reader's own study / research. */
+  personalRelevance: string;
   importanceScore: number;
 }
 
@@ -116,7 +122,7 @@ export interface BriefingSourceMix {
 }
 
 /** Bumped whenever the payload shape changes, to invalidate the day cache. */
-export const BRIEFING_SCHEMA_VERSION = 3;
+export const BRIEFING_SCHEMA_VERSION = 8;
 
 export interface DailyBriefing {
   /** Payload shape version — see BRIEFING_SCHEMA_VERSION. */

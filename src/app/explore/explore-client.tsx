@@ -224,9 +224,6 @@ export function ExploreClient() {
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
             Explore
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            浏览、检索与筛选已采集的真实情报（arXiv / GitHub / Hacker News / RSS）。
-          </p>
         </div>
         <Segmented<ViewMode>
           value={view}

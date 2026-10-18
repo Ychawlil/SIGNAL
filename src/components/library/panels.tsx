@@ -118,7 +118,6 @@ export function CollectionsTab({
         <EmptyState
           icon={<FolderOpen />}
           title="还没有研究专题"
-          description="把相关情报组织成一个专题，便于长期跟踪同一条技术路线。"
         />
       ) : (
         <div className="flex flex-col gap-2">

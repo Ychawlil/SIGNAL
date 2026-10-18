@@ -2,7 +2,6 @@
 
 import { ArrowUpRight } from "lucide-react";
 import type { IntelligenceItem } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImportanceMeter } from "@/components/items/meta";
@@ -17,15 +16,10 @@ export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
   if (!item) {
     return (
       <section>
-        <SectionHeading
-          index="B"
-          label="Highlight"
-          title="Signal of the Day"
-          description="今日最值得深入理解的一项技术进展。"
-        />
+        <SectionHeading index="B" label="Highlight" title="Signal of the Day" />
         <Card>
           <CardContent className="p-5 text-sm text-muted-foreground">
-            过去 24 小时内没有达到重要性阈值的情报。
+            —
           </CardContent>
         </Card>
       </section>
@@ -34,21 +28,10 @@ export function SignalOfDay({ item, onOpen }: SignalOfDayProps) {
 
   return (
     <section>
-      <SectionHeading
-        index="B"
-        label="Highlight"
-        title="Signal of the Day"
-        description="今日最值得深入理解的一项技术进展。"
-      />
+      <SectionHeading index="B" label="Highlight" title="Signal of the Day" />
       <Card className="border-border-strong">
         <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="accent" className="font-mono uppercase tracking-wide">
-              Signal of the Day
-            </Badge>
-          </div>
-
-          <h3 className="mt-3 text-xl font-semibold leading-8 text-foreground">
+          <h3 className="text-xl font-semibold leading-8 text-foreground">
             {item.title}
           </h3>
           <p className="mt-2 text-[15px] leading-7 text-muted-foreground">

@@ -63,7 +63,6 @@ export function ReleaseList({ releases }: { releases: ReleaseSignal[] }) {
       <EmptyState
         icon={<TrendingUp />}
         title="No releases detected"
-        description="模型/工具 Release 会随 GitHub 追踪与模型提取逐步出现。"
       />
     );
   }
@@ -181,7 +180,6 @@ export function EarlySignalList({ signals }: { signals: EarlySignal[] }) {
       <EmptyState
         icon={<AlertTriangle />}
         title="暂无待验证的早期信号"
-        description="当出现高热度但证据不足，或重要性高但证据仅来自厂商自述的条目时，会列在这里。"
       />
     );
   }

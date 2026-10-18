@@ -82,6 +82,9 @@ CREATE TABLE IF NOT EXISTS analyses (
   is_model_release INTEGER NOT NULL DEFAULT 0,
   model_family TEXT,
   analyzed_at TEXT NOT NULL,
+  -- Which engine produced the text ('llm' / 'rule-based'). Legacy rows keep
+  -- '' = unknown so the re-analysis pass can upgrade them deliberately.
+  engine TEXT NOT NULL DEFAULT '',
   FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_analyses_importance ON analyses(importance_score DESC);
@@ -231,6 +234,14 @@ CREATE TABLE IF NOT EXISTS focus_weights (
 
 -- Legacy category id migration: 'x-signals' -> 'signals'.
 UPDATE articles SET category = 'signals' WHERE category = 'x-signals';
+
+-- Embodied topics merged into a single 'physical-ai' focus area.
+INSERT INTO focus_weights (topic, weight, updated_at)
+SELECT 'physical-ai', MAX(weight), MAX(updated_at) FROM focus_weights
+ WHERE topic IN ('vla', 'robot-learning', 'world-models')
+ HAVING COUNT(*) > 0
+ON CONFLICT(topic) DO NOTHING;
+DELETE FROM focus_weights WHERE topic IN ('vla', 'robot-learning', 'world-models');
 `;
 
 let db: DatabaseSync | null = null;
@@ -257,6 +268,19 @@ function dropLegacyColumns(database: DatabaseSync): void {
   }
 }
 
+/** Adds columns that newer builds write but older databases lack. */
+function addMissingColumns(database: DatabaseSync): void {
+  const columns = (
+    database.prepare(`SELECT name FROM pragma_table_info('analyses')`).all() as {
+      name: string;
+    }[]
+  ).map((row) => row.name);
+
+  if (!columns.includes("engine")) {
+    database.exec(`ALTER TABLE analyses ADD COLUMN engine TEXT NOT NULL DEFAULT ''`);
+  }
+}
+
 export function getDb(): DatabaseSync {
   if (db) return db;
   const config = getServerConfig();
@@ -267,6 +291,7 @@ export function getDb(): DatabaseSync {
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  addMissingColumns(db);
   dropLegacyColumns(db);
   return db;
 }

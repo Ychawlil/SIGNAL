@@ -83,10 +83,18 @@ export interface ResearcherSignal {
 
 export interface EmergingTopic {
   topic: string;
+  /** Human-readable bucket name (categories resolve to their labels). */
+  label: string;
   count: number;
   previousCount: number | null;
   growth: number | null;
   windowDays: number;
+  /**
+   * True only when the previous window had enough articles for the growth
+   * percentage to mean anything. A 2 → 60 jump from a 2-article baseline is
+   * arithmetic noise, not a trend.
+   */
+  reliable: boolean;
   note: string;
 }
 

@@ -66,7 +66,6 @@ export function ModelView({ families }: { families: ModelFamily[] }) {
       <EmptyState
         icon={<Cpu />}
         title="No model versions detected"
-        description="分析引擎会从模型发布与仓库 Release 中提取版本信息。先运行一次分析。"
       />
     );
   }

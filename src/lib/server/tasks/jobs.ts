@@ -1,18 +1,31 @@
 import "server-only";
 import { isProviderEnabled } from "../env";
 import { runSync } from "../ingest";
-import { ensureAnalysis, getDailyBriefing } from "../analysis/service";
+import { analyzeBriefingWindow, ensureAnalysis, getDailyBriefing } from "../analysis/service";
 import { collectGithubTrends } from "../trends/github";
 import { runTask, type TaskName, type TaskTrigger } from "./runner";
 
 export const syncJob = () => runSync();
 
-export const analyzeJob = async () => {
-  const summary = await ensureAnalysis();
-  // Regenerate so a sync on the same day is reflected in the briefing.
-  const briefing = getDailyBriefing({ force: true });
-  return { ...summary, briefingCount: briefing.count };
-};
+/**
+ * Select the briefing first, then analyze only its items.
+ *
+ * The explicit "analyze the whole archive" action lives on the Analysis page
+ * and uses `ensureAnalysis`; a routine refresh must not pay for every new
+ * article the sources return.
+ */
+export const makeAnalyzeJob = (maxItems?: number) => async () =>
+  analyzeBriefingWindow({ maxItems });
+
+export const analyzeJob = makeAnalyzeJob();
+
+/**
+ * Explicit full-archive analysis (Analysis page → "运行分析").
+ *
+ * Deliberately separate from the refresh pipeline: this one does pay for
+ * every unanalyzed article, so it stays an opt-in action.
+ */
+export const fullAnalysisJob = () => ensureAnalysis();
 
 export const briefingJob = () => getDailyBriefing({ force: true });
 

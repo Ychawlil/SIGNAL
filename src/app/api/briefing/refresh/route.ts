@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDailyBriefing, type AnalysisRunSummary } from "@/lib/server/analysis/service";
+import { clampBriefingItems } from "@/lib/server/analysis/briefing";
+import type { BriefingAnalysisSummary } from "@/lib/server/analysis/service";
 import { guard } from "@/lib/server/auth";
-import { analyzeJob, syncJob } from "@/lib/server/tasks/jobs";
+import { makeAnalyzeJob, syncJob } from "@/lib/server/tasks/jobs";
 import { runTask } from "@/lib/server/tasks/runner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type AnalyzeJobResult = AnalysisRunSummary & { briefingCount: number };
-
 /**
- * Manual "update now" from the Daily Briefing page: pull new articles,
- * analyze the unseen ones, then rebuild the briefing from stored data.
+ * Manual "update now" from the Daily Briefing page.
+ *
+ * Order is deliberate: collect new articles, give them a cheap deterministic
+ * baseline, *select* today's briefing, and only then call the analysis engine
+ * for the selected items that do not already have a real analysis. A refresh
+ * therefore costs at most `count` model calls.
  *
  * Steps are locked and idempotent, and every insert is guarded by unique
  * constraints, so repeated clicks cannot duplicate articles or briefing
@@ -22,17 +25,22 @@ export async function POST(request: NextRequest) {
   const denied = guard(request);
   if (denied) return denied;
 
-  const syncRun = await runTask("sync", "manual", syncJob, { retries: 1 });
-  const analyzeRun = await runTask<AnalyzeJobResult>("analyze", "manual", analyzeJob, {
-    retries: 1,
-  });
+  // The "daily signal count" preference lives in the browser, so the client
+  // tells us how many items today's briefing should contain.
+  const body = (await request.json().catch(() => ({}))) as { count?: unknown };
+  const maxItems =
+    body.count === undefined ? undefined : clampBriefingItems(body.count);
 
-  // analyzeJob already rebuilds the briefing; only force a rebuild when that
-  // step could not run (failed or locked by another task).
-  const briefing =
-    analyzeRun.status === "success" ? getDailyBriefing() : getDailyBriefing({ force: true });
-  const syncResult = syncRun.status === "success" ? syncRun.result : null;
+  const syncRun = await runTask("sync", "manual", syncJob, { retries: 1 });
+  const analyzeRun = await runTask<BriefingAnalysisSummary>(
+    "analyze",
+    "manual",
+    makeAnalyzeJob(maxItems),
+    { retries: 1 },
+  );
+
   const analyzeResult = analyzeRun.status === "success" ? analyzeRun.result : null;
+  const syncResult = syncRun.status === "success" ? syncRun.result : null;
 
   return NextResponse.json({
     sync: {
@@ -43,13 +51,17 @@ export async function POST(request: NextRequest) {
     },
     analyze: {
       status: analyzeRun.status,
+      selected: analyzeResult?.selected ?? 0,
+      baseline: analyzeResult?.baseline ?? 0,
       analyzed: analyzeResult?.analyzed ?? 0,
+      skipped: analyzeResult?.skipped ?? 0,
+      failed: analyzeResult?.failed ?? 0,
+      failedSample: analyzeResult?.failedSample ?? null,
+      engine: analyzeResult?.engine ?? null,
       error: analyzeRun.error ?? analyzeRun.skippedReason,
     },
     briefing: {
-      date: briefing.date,
-      generatedAt: briefing.generatedAt,
-      count: briefing.count,
+      count: analyzeResult?.briefingCount ?? null,
     },
   });
 }

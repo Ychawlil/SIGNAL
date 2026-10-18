@@ -10,9 +10,9 @@ export const DEFAULT_FOCUS_WEIGHTS: Record<TopicId, number> = {
   "llm-reasoning": 85,
   "ai-coding": 80,
   "ai-agents": 75,
-  "world-models": 80,
-  vla: 90,
-  "robot-learning": 85,
+  // Embodied AI is a single tracked area (VLA / robot learning / world models
+  // are facets of it, not separate priorities).
+  "physical-ai": 90,
   "ai-math": 80,
   "ai-systems": 70,
 };

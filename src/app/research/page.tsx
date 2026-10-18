@@ -194,9 +194,6 @@ export default function ResearchPage() {
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
           Research
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          基于真实论文、报告与开源项目生成的结构化研究材料：摘要、关键变化、差异、证据、局限与推荐阅读。
-        </p>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">

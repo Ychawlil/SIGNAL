@@ -53,6 +53,9 @@ function toItem(article: AnalyzedArticleRow): BriefingItem {
     publishedAt: article.publishedAt,
     oneLineSummary: article.analysis.oneLineSummary,
     keyChange: article.analysis.keyChange,
+    whyItMatters: article.analysis.impact,
+    limitations: article.analysis.limitations,
+    personalRelevance: article.analysis.personalRelevance,
     importanceScore: article.analysis.importanceScore,
   };
 }
@@ -191,9 +194,9 @@ export function generateBriefing(
   const date = now.toISOString().slice(0, 10);
   const intro =
     count === 0
-      ? "过去 24 小时内没有达到重要性阈值的情报，今日简报不凑数。"
-      : `仅统计过去 24 小时内发布、重要性 ≥ ${MIN_IMPORTANCE} 的情报，共精选 ${count} 条。`;
-  const digest = buildDigest(sections, selected.length, sourceMix);
+      ? "过去 24 小时无达标情报"
+      : `过去 24 小时 · 重要性 ≥ ${MIN_IMPORTANCE} · 精选 ${count} 条`;
+  const digest = buildDigest(sections, selected.length);
 
   return {
     version: BRIEFING_SCHEMA_VERSION,
@@ -245,16 +248,13 @@ const CATEGORY_TOPICS: Record<string, { id: string; label: string }[]> = {
     { id: "llm-reasoning", label: "LLM Reasoning" },
     { id: "ai-agents", label: "AI Agents" },
   ],
-  "ai-research": [
-    { id: "llm-reasoning", label: "LLM Reasoning" },
-    { id: "world-models", label: "World Models" },
-  ],
+  // World Models belongs to the embodied area, so it is no longer a separate chip.
+  "ai-research": [{ id: "llm-reasoning", label: "LLM Reasoning" }],
   "ai-math": [{ id: "ai-math", label: "AI for Mathematics" }],
   "ai-cs": [{ id: "ai-systems", label: "AI for Systems" }],
-  "physical-ai": [
-    { id: "vla", label: "VLA" },
-    { id: "robot-learning", label: "Robot Learning" },
-  ],
+  // Embodied AI is reported as one area: VLA / Robot Learning / World Models
+  // are facets of the same category, so splitting them only inflated counts.
+  "physical-ai": [],
   "agents-coding": [{ id: "ai-agents", label: "AI Agents" }, { id: "ai-coding", label: "AI Coding" }],
   "open-source": [{ id: "ai-coding", label: "AI Coding" }],
   signals: [{ id: "ai-agents", label: "AI Agents" }],
@@ -304,14 +304,6 @@ function buildKeyThemes(
     .slice(0, 5);
 }
 
-function trimSentence(value: string, max: number): string {
-  const text = value.replace(/\s+/g, " ").trim();
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  const boundary = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("; "));
-  return `${(boundary > max * 0.5 ? cut.slice(0, boundary) : cut).trim()}…`;
-}
-
 /** Join sentences, inserting a space only after Latin-ending sentences. */
 function joinSentences(list: string[]): string {
   return list.reduce((acc, sentence) => {
@@ -320,30 +312,17 @@ function joinSentences(list: string[]): string {
   }, "");
 }
 
-function buildDigest(
-  sections: BriefingSection[],
-  count: number,
-  sourceMix: BriefingSourceMix[],
-): string {
+function buildDigest(sections: BriefingSection[], count: number): string {
   if (count === 0) {
-    return "过去 24 小时内没有达到重要性阈值的情报。为避免用低质量内容填满版面，本节保持为空；可稍后在设置页重新同步数据源。";
+    return "—";
   }
 
   const sentences: string[] = [];
-
-  const covered = sections
-    .filter((section) => section.key !== "top")
-    .map((section) => section.title.replace(/[（(].*$/, ""));
-  sentences.push(
-    covered.length > 0
-      ? `本期共 ${count} 条精选，覆盖 ${covered.length + 1} 个板块：今日重点，以及${covered.join("、")}。`
-      : `本期共 ${count} 条精选。`,
-  );
-
   const top = sections.find((section) => section.key === "top")?.items[0];
   if (top) {
-    const change = trimSentence(top.keyChange || top.oneLineSummary, 120);
-    const title = trimSentence(top.title, 90);
+    // Shown in full: the card grows with the text, so nothing is truncated.
+    const change = (top.keyChange || top.oneLineSummary).replace(/\s+/g, " ").trim();
+    const title = top.title.replace(/\s+/g, " ").trim();
     sentences.push(
       change
         ? `核心看点是「${title}」，关键变化：${/[.。!?！？…]$/.test(change) ? change : `${change}。`}`
@@ -351,12 +330,4 @@ function buildDigest(
     );
   }
 
-  if (sourceMix.length > 0) {
-    sentences.push(
-      `来源构成：${sourceMix
-        .map((entry) => `${entry.sourceName} ${entry.count} 条`)
-        .join("、")}。`,
-    );
-  }
-
-  return joinSentences(sentences);}
+  return joinSentences(sentences);}

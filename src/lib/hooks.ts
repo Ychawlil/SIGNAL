@@ -25,3 +25,19 @@ export function usePersistentState<T>(
   );
   return [value, setValue];
 }
+
+const noopSubscribe = () => () => {};
+
+/**
+ * False during SSR and the hydration render, true afterwards.
+ *
+ * Persisted client state cannot match the server HTML, so anything that
+ * renders it as text should wait one tick to avoid a hydration mismatch.
+ */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}

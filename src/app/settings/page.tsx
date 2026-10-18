@@ -112,13 +112,10 @@ export default function SettingsPage() {
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
           Settings
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          主题、关注领域与数据偏好。关注权重保存在服务端并直接参与重要性计算；其余偏好保存在本地浏览器，暂无真实账号系统。
-        </p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SettingSection title="Theme" description="切换工作台的深色 / 浅色主题。">
+        <SettingSection title="Theme">
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -152,7 +149,7 @@ export default function SettingsPage() {
 
         <SettingSection
           title="Daily signal count"
-          description="每日简报最多展示的情报条数，首页与分析页都会按此数量生成简报。"
+          description="每日简报条数。"
         >
           <div className="flex items-center gap-3">
             <Input
@@ -177,7 +174,7 @@ export default function SettingsPage() {
 
       <SettingSection
         title="Focus areas & weights"
-        description="权重直接参与重要性计算：每个类别取该类别下最高的主题权重，换算为 0–30 的相关性因子。保存后会立即重算全部已分析情报的分数。"
+        description="权重换算为 0–30 的相关性因子，保存后立即重算全部分析。"
       >
         {draftWeights === null ? (
           <p className="text-sm text-muted-foreground">
@@ -219,7 +216,6 @@ export default function SettingsPage() {
             </ul>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <p className="text-xs leading-5 text-muted-foreground">
-                右侧小字是该权重换算出的相关性因子（满分 30）。
                 {rescored !== null
                   ? `本次已重算 ${rescored} 条分析。`
                   : weightsDirty
@@ -246,7 +242,7 @@ export default function SettingsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <SettingSection
           title="Default sorting"
-          description="Explore 列表打开时使用的排序方式；在 Explore 内手动切换会覆盖它。"
+          description="Explore 默认排序。"
         >
           <Select
             value={settings.defaultSort}
@@ -262,17 +258,16 @@ export default function SettingsPage() {
           </Select>
         </SettingSection>
 
-        <SettingSection title="Data status" description="本地数据更新状态的占位。">
+        <SettingSection title="Data status">
           <div className="flex flex-col gap-2 rounded-md border border-border bg-panel-secondary p-4">
             <div className="flex items-center gap-2 text-sm text-foreground">
               <Database className="h-4 w-4 text-muted-accent" />
               {settings.dataStatus === "synced" ? "已同步" : "从未同步"}
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              真实情报源的采集状态见下方「Sources &amp; sync」面板。
               {settings.lastSyncedAt
-                ? ` 上次同步：${settings.lastSyncedAt}`
-                : " 尚无同步记录。"}
+                ? `上次同步：${settings.lastSyncedAt}`
+                : "尚无同步记录。"}
             </p>
           </div>
         </SettingSection>
@@ -280,7 +275,7 @@ export default function SettingsPage() {
 
       <SourcePanel />
 
-      <SettingSection title="Data sources & privacy" description="关于数据来源与隐私的说明。">
+      <SettingSection title="Data sources & privacy">
         <div className="flex flex-col gap-3 text-sm leading-6 text-muted-foreground">
           <div className="flex gap-2.5">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-accent" />

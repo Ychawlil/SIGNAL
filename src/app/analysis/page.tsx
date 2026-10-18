@@ -19,6 +19,9 @@ interface RunSummary {
   engine: string;
   engineMessage: string;
   analyzed: number;
+  refreshed?: number;
+  failed?: number;
+  failedSample?: string | null;
   models: number;
   totalAnalyzed: number;
 }
@@ -123,9 +126,6 @@ export default function AnalysisPage() {
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
             Analysis
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            对已采集的真实情报做结构化分析：一句话摘要、关键变化、证据、局限、影响与个人相关性，并按重要性排序。
-          </p>
         </div>
         <Button variant="primary" size="sm" onClick={onRun} disabled={syncing}>
           {syncing ? (
@@ -146,7 +146,9 @@ export default function AnalysisPage() {
       {runSummary && (
         <div className="rounded-md border border-border bg-panel-secondary px-4 py-3 font-mono text-xs text-muted-foreground">
           engine: {runSummary.engine} · newly analyzed: {runSummary.analyzed} ·
+          refreshed: {runSummary.refreshed ?? 0} · failed: {runSummary.failed ?? 0} ·
           model versions: {runSummary.models} · total analyzed: {runSummary.totalAnalyzed}
+          {runSummary.failedSample ? ` · first error: ${runSummary.failedSample}` : ""}
         </div>
       )}
 

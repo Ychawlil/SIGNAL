@@ -18,15 +18,10 @@ const KIND_META: Record<
 export function WorthFollowing({ items }: { items: WorthFollowingItem[] }) {
   return (
     <section>
-      <SectionHeading
-        index="E"
-        label="Watchlist"
-        title="Worth Following"
-        description="近期值得持续追踪的模型与开源项目，来自真实仓库与模型版本数据。"
-      />
+      <SectionHeading index="E" label="Watchlist" title="Worth Following" />
       {items.length === 0 ? (
         <p className="rounded-lg border border-border bg-panel p-5 text-sm text-muted-foreground">
-          暂无足够的数据生成追踪清单，待采集更多仓库与模型版本后展示。
+          —
         </p>
       ) : (
         <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
@@ -46,10 +41,6 @@ export function WorthFollowing({ items }: { items: WorthFollowingItem[] }) {
                   </h3>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {item.description}
-                  </p>
-                  <p className="mt-2 border-t border-border pt-2 text-xs leading-5 text-muted-foreground">
-                    <span className="text-muted-accent">Why follow · </span>
-                    {item.whyFollow}
                   </p>
                 </CardContent>
               </Card>

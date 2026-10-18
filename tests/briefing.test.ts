@@ -257,10 +257,29 @@ describe("section A overview data", () => {
   });
 
   it("builds a digest from the actual selected items, not a fixed template", () => {
-    expect(briefing.digest.length).toBeGreaterThan(20);
-    expect(briefing.digest).toContain(`共 ${briefing.count} 条精选`);
     expect(briefing.digest).toContain("Title 1");
     expect(briefing.digest).toContain("Key change.");
+  });
+
+  it("keeps the digest text complete instead of truncating it", () => {
+    const long =
+      "This key change sentence is deliberately much longer than any previous truncation limit so that the digest must keep every single word of it.";
+    const withLongChange = generateBriefing(
+      [
+        row(1, "ai-models", 90, hoursAgo(1), { title: "A".repeat(150) }),
+        row(2, "physical-ai", 60, hoursAgo(2)),
+      ],
+      NOW,
+    );
+    expect(withLongChange.digest).not.toContain("…");
+    expect(withLongChange.digest).toContain("A".repeat(150));
+
+    const longChangeRow = generateBriefing(
+      [{ ...row(3, "ai-models", 95, hoursAgo(1)), analysis: { ...row(3, "ai-models", 95, hoursAgo(1)).analysis, keyChange: long } }],
+      NOW,
+    );
+    expect(longChangeRow.digest).toContain(long);
+    expect(longChangeRow.digest.endsWith("…")).toBe(false);
   });
 
   it("reports contributing sources instead of a credibility score", () => {
@@ -268,14 +287,33 @@ describe("section A overview data", () => {
     const total = briefing.sourceMix.reduce((sum, entry) => sum + entry.count, 0);
     expect(total).toBe(briefing.count);
     expect(briefing.sourceMix[0]).toEqual({ sourceName: "arXiv RSS", count: 3 });
-    expect(briefing.digest).toContain("来源构成");
     // The removed metric must not reappear through the payload.
     expect(briefing).not.toHaveProperty("evidence");
     expect(JSON.stringify(briefing)).not.toMatch(/"confidence/i);
   });
 
-  it("joins Latin-ending sentences with a space", () => {
-    expect(briefing.digest).toContain("Key change. 来源构成");
+  it("keeps the digest free of repeated stat boilerplate", () => {
+    // The page renders the count and the source mix separately, so the digest
+    // must not restate them.
+    expect(briefing.digest).not.toContain("条精选");
+    expect(briefing.digest).not.toContain("来源构成");
+    expect(briefing.digest).not.toContain("覆盖");
+  });
+
+  it("carries the analyzed prose the page renders, not placeholders", () => {
+    for (const section of briefing.sections) {
+      for (const item of section.items) {
+        expect(item.whyItMatters.trim()).not.toBe("");
+        expect(item.limitations.trim()).not.toBe("");
+        expect(item.personalRelevance.trim()).not.toBe("");
+        expect(item.oneLineSummary.trim()).not.toBe("");
+        expect(item.keyChange.trim()).not.toBe("");
+      }
+    }
+    const top = briefing.sections.find((s) => s.key === "top");
+    expect(top?.items[0].whyItMatters).toBe("Impact.");
+    expect(top?.items[0].limitations).toBe("Limitations.");
+    expect(top?.items[0].personalRelevance).toBe("Relevance.");
   });
 
   it("returns empty-but-honest overview data when nothing qualifies", () => {
@@ -283,7 +321,7 @@ describe("section A overview data", () => {
     expect(empty.count).toBe(0);
     expect(empty.keyThemes).toEqual([]);
     expect(empty.sourceMix).toEqual([]);
-    expect(empty.digest).toContain("没有达到重要性阈值");
+    expect(empty.digest).toBe("—");
     expect(empty.reduced).toBe(true);
   });
 });

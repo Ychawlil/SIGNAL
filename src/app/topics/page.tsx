@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Switch } from "@/components/ui/switch";
 import { useTopics } from "@/components/providers";
+import { useHydrated } from "@/lib/hooks";
 import { CATEGORY_MAP, TRACKING_META } from "@/lib/constants";
 import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import { TOPICS } from "@/lib/topics";
@@ -22,6 +23,9 @@ const STATUS_STYLE: Record<TrackingStatus, string> = {
 
 export default function TopicsPage() {
   const { isSubscribed, toggleSubscribed } = useTopics();
+  // Subscriptions live in localStorage, so the count must not be rendered
+  // during hydration (server default ≠ stored value).
+  const hydrated = useHydrated();
   const [onlyFollowing, setOnlyFollowing] = useState(false);
   const [stats, setStats] = useState<SignalStats | null>(null);
   const [topItems, setTopItems] = useState<SignalRecord[]>([]);
@@ -81,9 +85,6 @@ export default function TopicsPage() {
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
             Topics
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            主题信号数来自已采集的真实情报，订阅状态保存在本地。
-          </p>
         </div>
         <button
           onClick={() => setOnlyFollowing((v) => !v)}
@@ -96,7 +97,7 @@ export default function TopicsPage() {
         >
           Following only
           <span className="font-mono tabular-nums">
-            {TOPICS.filter((t) => isSubscribed(t.id)).length}
+            {hydrated ? TOPICS.filter((t) => isSubscribed(t.id)).length : null}
           </span>
         </button>
       </header>
@@ -112,11 +113,7 @@ export default function TopicsPage() {
       )}
 
       {!error && topics.length === 0 ? (
-        <EmptyState
-          icon={<Layers />}
-          title="You are not following any topic"
-          description="开启至少一个主题的追踪，情报工作台会围绕它组织内容。"
-        />
+        <EmptyState icon={<Layers />} title="You are not following any topic" />
       ) : (
         <div className="grid gap-2.5 lg:grid-cols-2">
           {topics.map((topic) => {
@@ -174,9 +171,7 @@ export default function TopicsPage() {
                       Key developments
                     </p>
                     {developments.length === 0 ? (
-                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                        暂无高重要性情报落入该主题。
-                      </p>
+                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">—</p>
                     ) : (
                       <ul className="mt-1.5 flex flex-col gap-1">
                         {developments.map((d) => (
@@ -195,7 +190,6 @@ export default function TopicsPage() {
                   {topic.relatedCategories
                     .map((c) => CATEGORY_MAP[c]?.label)
                     .join(" · ")}
-                  <span className="ml-2 text-muted-accent">· {statusMeta.hint}</span>
                 </p>
               </article>
             );

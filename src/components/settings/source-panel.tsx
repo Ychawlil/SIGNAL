@@ -140,9 +140,6 @@ export function SourcePanel() {
             <h3 className="text-[15px] font-semibold text-foreground">
               Sources &amp; sync
             </h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              真实情报源采集状态。采集结果写入本地 SQLite，失败时保留上次成功数据。
-            </p>
           </div>
           <Button
             variant="primary"

@@ -143,9 +143,6 @@ function AnalyzedRow({ item }: { item: AnalyzedArticleRow }) {
 export function ImportanceView({ items }: { items: AnalyzedArticleRow[] }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-sm leading-6 text-muted-foreground">
-        按重要性排序，展开可看到五项重要性因子。来源自述（vendor）与独立验证（independent）分开标记，作为阅读时的参考，而不是评分。
-      </p>
       {items.map((item) => (
         <AnalyzedRow key={item.id} item={item} />
       ))}

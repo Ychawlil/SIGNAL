@@ -24,7 +24,6 @@ export function BriefingList({ sections, onOpen }: BriefingListProps) {
         index="C"
         label="Briefing"
         title="Today's Briefing"
-        description="按重要性排列的当日情报列表，由真实采集与分析结果生成。"
         aside={
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
             {count} signals

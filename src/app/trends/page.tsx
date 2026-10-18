@@ -44,22 +44,13 @@ function fetchTrends(params: {
   });
 }
 
-function SectionHeader({
-  index,
-  title,
-  description,
-}: {
-  index: string;
-  title: string;
-  description: string;
-}) {
+function SectionHeader({ index, title }: { index: string; title: string }) {
   return (
     <div className="mb-3">
       <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
         <span className="text-accent">{index}</span>
         {title}
       </p>
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -127,9 +118,6 @@ export default function TrendsPage() {
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
             Trends
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            发现待验证的技术线索。高热度不等于技术突破：热度、增长、技术价值、证据质量与相关性分别展示。
-          </p>
         </div>
         <Button
           variant="primary"
@@ -212,11 +200,7 @@ export default function TrendsPage() {
           <CoveragePanel coverage={report.coverage} />
 
           <section>
-            <SectionHeader
-              index="A"
-              title="Rising Repositories"
-              description="新建或近期活跃的相关仓库；增长率为真实快照序列计算，缺少历史快照时明确标注 unknown。"
-            />
+            <SectionHeader index="A" title="Rising Repositories" />
             {githubPaused && report.risingRepos.length > 0 && (
               <p className="mb-2.5 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs leading-5 text-warning">
                 GitHub 自动采集已暂停，以下指标来自历史快照
@@ -242,48 +226,23 @@ export default function TrendsPage() {
           </section>
 
           <section>
-            <SectionHeader
-              index="B"
-              title="Model & Tool Releases"
-              description="从模型版本追踪中提取的发布信息，区分厂商声明与独立评测。"
-            />
+            <SectionHeader index="B" title="Model & Tool Releases" />
             <ReleaseList releases={report.releases} />
           </section>
 
           <section>
-            <SectionHeader
-              index="C"
-              title="Researcher Signals"
-              description="研究者分享的结果与论文信号；保留原始作者与来源。"
-            />
+            <SectionHeader index="C" title="Researcher Signals" />
             <ResearcherSignalList signals={report.researcherSignals} />
           </section>
 
           <section>
-            <SectionHeader
-              index="D"
-              title="Emerging Topics"
-              description="按时间窗口聚合的主题变化；无历史窗口时不计算增长率。"
-            />
+            <SectionHeader index="D" title="Emerging Topics" />
             <EmergingTopicList topics={report.emergingTopics} />
           </section>
 
           <section>
-            <SectionHeader
-              index="E"
-              title="Early Signals — 待验证"
-              description="高热度但证据不足，或重要性高但证据仅来自厂商自述的线索，需独立验证后再下结论。"
-            />
+            <SectionHeader index="E" title="Early Signals — 待验证" />
             <EarlySignalList signals={report.earlySignals} />
-          </section>
-
-          <section className="rounded-lg border border-border bg-panel p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-              Scoring method
-            </p>
-            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-              {report.scoringExplanation}
-            </p>
           </section>
         </>
       ) : null}

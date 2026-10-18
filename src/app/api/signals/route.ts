@@ -22,13 +22,18 @@ const VALID_TOPICS: TopicId[] = [
   "llm-reasoning",
   "ai-coding",
   "ai-agents",
-  "world-models",
-  "vla",
-  "robot-learning",
+  "physical-ai",
   "ai-math",
   "ai-systems",
 ];
 const VALID_SORTS = ["newest", "importance"] as const;
+
+/** Retired topic ids, mapped to the topic that absorbed them. */
+const LEGACY_TOPICS: Record<string, TopicId> = {
+  vla: "physical-ai",
+  "robot-learning": "physical-ai",
+  "world-models": "physical-ai",
+};
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -37,6 +42,9 @@ export async function GET(request: NextRequest) {
   const q = params.get("q") ?? undefined;
   const categoryParam = params.get("category");
   const topicParam = params.get("topic");
+  const normalizedTopic = topicParam
+    ? (LEGACY_TOPICS[topicParam] ?? topicParam)
+    : null;
   const source = params.get("source") ?? undefined;
   const providerParam = params.get("provider");
   const sortParam = params.get("sort") ?? "newest";
@@ -46,8 +54,8 @@ export async function GET(request: NextRequest) {
       ? (categoryParam as CategoryId)
       : undefined;
   const topic =
-    topicParam && VALID_TOPICS.includes(topicParam as TopicId)
-      ? (topicParam as TopicId)
+    normalizedTopic && VALID_TOPICS.includes(normalizedTopic as TopicId)
+      ? (normalizedTopic as TopicId)
       : undefined;
   const provider =
     providerParam && VALID_PROVIDERS.includes(providerParam as ProviderId)

@@ -5,15 +5,10 @@ import { SectionHeading } from "./section-heading";
 export function WeeklyDirection({ items }: { items: WeeklyDirectionItem[] }) {
   return (
     <section>
-      <SectionHeading
-        index="F"
-        label="Direction"
-        title="Weekly Direction"
-        description="本周出现的新趋势，以及尚待验证的开放问题。"
-      />
+      <SectionHeading index="F" label="Direction" title="Weekly Direction" />
       {items.length === 0 ? (
         <p className="rounded-lg border border-border bg-panel p-5 text-sm text-muted-foreground">
-          暂无足够的趋势数据，待采集更多历史快照后展示。
+          —
         </p>
       ) : (
         <div className="grid gap-2.5 lg:grid-cols-3">

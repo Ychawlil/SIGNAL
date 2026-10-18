@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Search } from "lucide-react";
+import { Menu, PanelLeftOpen, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/components/search/search-dialog";
 import { DateLabel } from "@/components/live-time";
@@ -9,13 +9,19 @@ import { ThemeToggle } from "./theme-toggle";
 
 interface TopbarProps {
   onOpenMobileNav: () => void;
+  onToggleSidebar: () => void;
+  sidebarCollapsed: boolean;
 }
 
-export function Topbar({ onOpenMobileNav }: TopbarProps) {
+export function Topbar({
+  onOpenMobileNav,
+  onToggleSidebar,
+  sidebarCollapsed,
+}: TopbarProps) {
   const { openSearch } = useSearch();
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/60 px-4 backdrop-blur-md sm:px-6">
       <Button
         variant="ghost"
         size="icon"
@@ -25,6 +31,21 @@ export function Topbar({ onOpenMobileNav }: TopbarProps) {
       >
         <Menu className="h-5 w-5" />
       </Button>
+
+      {/* The sidebar owns its own collapse button; once hidden, this brings it back. */}
+      {sidebarCollapsed && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:inline-flex"
+          aria-label="Expand sidebar"
+          aria-expanded={false}
+          title="展开侧边栏"
+          onClick={onToggleSidebar}
+        >
+          <PanelLeftOpen className="h-5 w-5" />
+        </Button>
+      )}
 
       <div className="lg:hidden">
         <Brand compact />

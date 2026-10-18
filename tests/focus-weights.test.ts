@@ -13,13 +13,10 @@ import {
 import type { TopicId } from "@/lib/types";
 
 describe("focus weights → relevance mapping", () => {
-  it("scales a category by the strongest matching topic weight", () => {
-    // physical-ai is fed by vla / robot-learning / world-models.
+  it("scales a category by its topic weight", () => {
     const weights: Record<TopicId, number> = {
       ...DEFAULT_FOCUS_WEIGHTS,
-      vla: 100,
-      "robot-learning": 10,
-      "world-models": 10,
+      "physical-ai": 100,
     };
     expect(relevanceForCategory("physical-ai", weights)).toBe(MAX_RELEVANCE);
   });
@@ -27,7 +24,7 @@ describe("focus weights → relevance mapping", () => {
   it("ignores topic weights that do not feed the category", () => {
     const weights: Record<TopicId, number> = {
       ...DEFAULT_FOCUS_WEIGHTS,
-      vla: 100,
+      "physical-ai": 100,
       "ai-math": 20,
     };
     expect(relevanceForCategory("physical-ai", weights)).toBe(30);
@@ -90,8 +87,8 @@ describe("weight validation", () => {
   });
 
   it("ignores unknown topics and keeps defaults for the rest", () => {
-    const weights = normalizeWeights({ vla: 25, "not-a-topic": 99 });
-    expect(weights.vla).toBe(25);
+    const weights = normalizeWeights({ "physical-ai": 25, "not-a-topic": 99 });
+    expect(weights["physical-ai"]).toBe(25);
     expect(weights["ai-math"]).toBe(DEFAULT_FOCUS_WEIGHTS["ai-math"]);
     expect(weights).not.toHaveProperty("not-a-topic");
   });
@@ -162,7 +159,7 @@ describe("weights drive stored importance", () => {
     );
 
     // Analyze with robotics de-prioritised so math wins the ranking.
-    const mathsFirst = { ...DEFAULT_FOCUS_WEIGHTS, vla: 0, "robot-learning": 0, "world-models": 0, "ai-math": 100 };
+    const mathsFirst = { ...DEFAULT_FOCUS_WEIGHTS, "physical-ai": 0, "ai-math": 100 };
     const weights = saveFocusWeights(mathsFirst);
     expect(getFocusWeights()).toEqual(weights);
 
@@ -207,7 +204,7 @@ describe("weights drive stored importance", () => {
     expect(mathBefore.s).toBeGreaterThan(physicalBefore.s);
 
     // Flip the weights the other way and rescore without re-running analysis.
-    const roboticsFirst = { ...mathsFirst, vla: 100, "robot-learning": 100, "world-models": 100, "ai-math": 0 };
+    const roboticsFirst = { ...mathsFirst, "physical-ai": 100, "ai-math": 0 };
     saveFocusWeights(roboticsFirst);
     const rescored = rescoreImportance(roboticsFirst);
     expect(rescored).toBe(3);

@@ -19,9 +19,7 @@ export type TopicId =
   | "llm-reasoning"
   | "ai-coding"
   | "ai-agents"
-  | "world-models"
-  | "vla"
-  | "robot-learning"
+  | "physical-ai"
   | "ai-math"
   | "ai-systems";
 
@@ -94,7 +92,6 @@ export interface WorthFollowingItem {
   name: string;
   kind: "model" | "paper" | "repo" | "team";
   description: string;
-  whyFollow: string;
   referenceUrl: string;
 }
 

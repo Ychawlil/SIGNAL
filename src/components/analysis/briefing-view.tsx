@@ -20,7 +20,7 @@ export function BriefingView({ briefing }: { briefing: DailyBriefing }) {
       {briefing.sections.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            没有达到质量阈值的精选内容，今日简报不凑数。
+            —
           </CardContent>
         </Card>
       ) : (

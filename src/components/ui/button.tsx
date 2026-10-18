@@ -8,13 +8,13 @@ type Size = "sm" | "md" | "icon" | "icon-sm";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-black/55 text-white border border-white/10 backdrop-blur-sm hover:bg-black/70 disabled:opacity-50",
+    "bg-black/55 text-white border border-white/10 backdrop-blur-sm hover:bg-black/60 disabled:opacity-50",
   secondary:
-    "bg-panel-secondary text-foreground border border-border hover:border-border-strong disabled:opacity-50",
+    "bg-panel-secondary/70 text-foreground border border-border hover:bg-panel-secondary/75 hover:border-border-strong disabled:opacity-50",
   ghost:
-    "bg-transparent text-muted-foreground hover:text-foreground hover:bg-panel-secondary disabled:opacity-50",
+    "bg-transparent text-muted-foreground hover:text-foreground hover:bg-panel-secondary/60 disabled:opacity-50",
   outline:
-    "bg-transparent border border-border text-foreground hover:border-border-strong hover:bg-panel-secondary disabled:opacity-50",
+    "bg-transparent border border-border text-foreground hover:border-border-strong hover:bg-panel-secondary/60 disabled:opacity-50",
 };
 
 const sizeClasses: Record<Size, string> = {

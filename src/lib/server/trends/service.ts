@@ -1,6 +1,7 @@
 import "server-only";
 import { getDb } from "../db";
 import { isProviderEnabled } from "../env";
+import { CATEGORY_MAP } from "@/lib/constants";
 import {
   computeRepoMetrics,
   compositeScore,
@@ -198,13 +199,15 @@ function buildEmergingTopics(rangeDays: number): EmergingTopic[] {
     2000,
   );
 
+  /**
+   * Buckets are categories only. Raw tags mix arXiv codes ("cs.ai") and
+   * provider names ("hacker-news") with real topics, which made the section
+   * look like debug output and double-counted the same article.
+   */
   const countByTopic = (articles: ArticleRow[]): Map<string, number> => {
     const counts = new Map<string, number>();
     for (const article of articles) {
-      const keys = new Set<string>([article.category, ...article.tags.map((t) => t.toLowerCase())]);
-      for (const key of keys) {
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-      }
+      counts.set(article.category, (counts.get(article.category) ?? 0) + 1);
     }
     return counts;
   };
@@ -213,34 +216,59 @@ function buildEmergingTopics(rangeDays: number): EmergingTopic[] {
   const previousCounts = countByTopic(previous);
 
   const all = new Set<string>([...currentCounts.keys(), ...previousCounts.keys()]);
+  /**
+   * A growth percentage is only meaningful when the *previous* window had a
+   * real sample. Right after a fresh install the previous window holds a
+   * handful of rows, so raw ratios produce numbers like "+2741%" that measure
+   * the start of collection rather than a trend.
+   */
+  const MIN_BASELINE_COUNT = 30;
+  const MIN_BASELINE_TOTAL = 200;
+  const previousTotal = previous.length;
+  const baselineEnough = previousTotal >= MIN_BASELINE_TOTAL;
+
   const emerging: EmergingTopic[] = [];
   for (const topic of all) {
     const count = currentCounts.get(topic) ?? 0;
     const previousCount = previousCounts.get(topic) ?? 0;
     if (count === 0) continue;
 
+    const label =
+      (CATEGORY_MAP as Record<string, { label?: string }>)[topic]?.label ??
+      topic.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
     let growth: number | null;
     let note: string;
-    if (previousCount === 0) {
+    if (!baselineEnough) {
       growth = null;
-      note = "上一时间窗口无记录，无法计算增长率，仅记录出现次数。";
+      note = `本期 ${count} 条；上期仅 ${previousCount} 条（整个窗口 ${previousTotal} 条），样本不足，不计算增长率。`;
+    } else if (previousCount < MIN_BASELINE_COUNT) {
+      growth = null;
+      note = `本期 ${count} 条，上期 ${previousCount} 条，样本过少，不计算增长率。`;
     } else {
       growth = Math.round(((count - previousCount) / previousCount) * 100);
-      note = `较上一窗口 ${growth >= 0 ? "+" : ""}${growth}%。`;
+      note = `本期 ${count} 条，上期 ${previousCount} 条（${growth >= 0 ? "+" : ""}${growth}%）。`;
     }
 
     emerging.push({
       topic,
+      label,
       count,
       previousCount: previousCount === 0 ? null : previousCount,
       growth,
       windowDays: rangeDays,
+      reliable: growth !== null,
       note,
     });
   }
 
   return emerging
-    .sort((a, b) => (b.growth ?? -1) - (a.growth ?? -1) || b.count - a.count)
+    .sort(
+      (a, b) =>
+        Number(b.reliable) - Number(a.reliable) ||
+        (b.growth ?? -1) - (a.growth ?? -1) ||
+        b.count - a.count,
+    )
     .slice(0, 15);
 }
 

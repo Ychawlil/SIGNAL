@@ -34,6 +34,7 @@ It goes beyond headlines to help you understand **what changed, why it matters, 
 |---|---|
 | Daily intelligence briefing | Available; manual refresh from the page |
 | AI-powered article analysis | Available; DeepSeek-compatible LLM with rule-based fallback |
+| Briefing-scoped analysis | Available; only selected items that lack an analysis are sent to the model |
 | Personal library, notes & collections | Available |
 | Topic subscriptions & weekly review | Available |
 | GitHub trend tracking | Available |
@@ -53,6 +54,7 @@ placeholder content is served in production.
 | Daily signal count | Passed to `/api/briefing?count=` and caps the number of briefing items |
 | Default sorting | Used as the initial Explore sort order until you change it in the view |
 | Theme | Light/dark, stored per browser |
+| Sidebar | Collapsed/expanded state, stored per browser; the content re-centres when collapsed |
 
 Preferences other than focus-area weights live in `localStorage` because SIGNAL has no
 account system yet.
@@ -62,11 +64,22 @@ account system yet.
 SIGNAL collects, analyzes, and organizes technology intelligence into a searchable personal knowledge base.
 
 1. **Collect** — Retrieve articles and research from arXiv RSS/API, GitHub, RSS feeds, and Hacker News.
-2. **Analyze** — Extract key changes, evidence, limitations, and potential impact.
-3. **Prioritize** — Score importance from focus-area relevance (driven by your saved
-   weights), novelty, potential impact, verifiability and learning value. Relevance is
-   recomputed immediately when weights are saved.
+2. **Select** — Build today's briefing from the 24h window. Importance is a deterministic
+   score (focus weights + novelty + impact + verifiability + learning), so selection needs
+   no model call and never waits on one.
+3. **Analyze** — Only the items that made the briefing are sent to the LLM, and only when
+   they do not already have a real analysis; anything with an existing analysis is skipped.
+   A refresh therefore costs at most *daily signal count* model calls, not one per new
+   article. Selected items get an LLM-written one-line summary, key change, evidence,
+   **why it matters, limitations and personal relevance**, while scoring stays deterministic.
+   Without `LLM_ANALYZER_API_KEY` the rule-based engine keeps the pipeline working. An
+   analysis that comes back missing those fields is never stored, so the interface cannot
+   show a placeholder as if it were analysis.
 4. **Track** — Save discoveries, organize research, and review developments over time.
+
+Every stored article gets a free deterministic baseline analysis on ingest, so Explore,
+Research and Topics stay complete while the paid analysis is reserved for the briefing.
+The Analysis page has a separate opt-in action that analyzes the whole archive.
 
 Original sources remain accessible. Official claims, preprints, peer-reviewed research, and independent verification are treated as distinct forms of evidence.
 
@@ -78,6 +91,7 @@ Original sources remain accessible. Official claims, preprints, peer-reviewed re
 - **Data sources:** arXiv daily RSS, arXiv export API, GitHub REST API, Hacker News, RSS/Atom
   (arXiv and GitHub collection can be paused per source)
 - **Analysis:** Rule-based engine with optional OpenAI-compatible LLM integration
+  (verified against the DeepSeek API; each article is one chat completion)
 - **Testing:** Vitest, ESLint, TypeScript, Next.js build
 
 ## ✦ Getting Started
@@ -95,9 +109,19 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open the URL printed in your terminal, usually `http://localhost:3000`.
+Open the URL printed in your terminal. The port is set in `package.json`
+(`"dev": "next dev -p 2026"`), so this checkout serves `http://localhost:2026`.
 
 The SQLite database is initialized automatically on first access.
+
+### Desktop launcher (Windows)
+
+`scripts/launch.ps1` starts the dev server when it is not running, waits until it
+answers, then opens the browser. The `SIGNAL.bat` shortcut on the desktop is a thin
+wrapper around it; it finds the project through this script and reads the port from
+`package.json`, so both survive a port change.
+
+Closing the minimised console window that the launcher opens stops the server.
 
 ### Available Commands
 
@@ -121,9 +145,10 @@ Settings and Trends.
 | Variable | Purpose |
 |---|---|
 | `GITHUB_TOKEN` | Higher GitHub API rate limits (60 → 5000/h); verify it via Settings → GitHub 认证 |
-| `LLM_ANALYZER_API_KEY` | Enable LLM-based analysis |
+| `LLM_ANALYZER_API_KEY` | Enable LLM-based analysis (why it matters, limitations, personal relevance) |
 | `LLM_ANALYZER_BASE_URL` | OpenAI-compatible API endpoint |
 | `LLM_ANALYZER_MODEL` | Analysis model |
+| `LLM_ANALYZER_TIMEOUT_MS` | Per-request timeout, default 90000 |
 | `RSS_FEEDS` | Additional RSS/Atom feeds |
 | `ARXIV_RSS_CATEGORIES` | arXiv daily announcement categories to follow |
 | `SIGNAL_DISABLED_PROVIDERS` | Pause automatic collection per source (e.g. `arxiv,github`) |
@@ -136,7 +161,9 @@ See `.env.example` and [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for additional con
 
 ## ✦ Roadmap
 
-- [ ] Configure and validate LLM-powered analysis
+- [x] Validate DeepSeek-powered analysis end to end (why it matters, limitations, personal relevance)
+- [x] Select the briefing before analyzing; analyze only selected items that lack one
+- [ ] Re-analyze the whole archive with the LLM (opt-in action on the Analysis page)
 - [ ] Improve model-version and capability comparisons
 - [ ] Build reliable multi-day trend measurements
 - [ ] Add researcher/community signal tracking beyond arXiv
