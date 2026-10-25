@@ -1,198 +1,153 @@
-# SIGNAL Universe
+﻿# SIGNAL Universe
 
-### An Information Universe
+**把 AI 与前沿科技资讯，变成可以探索的个人信息宇宙。**
 
-首页为原创低多边形太阳系：太阳是每日简报入口，六颗公转并自转的星球分别对应 AI 前沿、研究、开源、社区、科学和研究库。公转速度随轨道半径增大而降低。背景为三维空间中的程序化银河、暗尘带和分层星点，随视角旋转、缩放产生自然变化。点击后镜头飞向星球真实轨道，在同一场景内阅读；所选星球在左侧露出右半球，太阳居于可见背景中央，镜头随公转追踪。返回全景才能切换板块；支持暂停、键盘、减少动态效果和无 WebGL 普通导航。独立分析页面、接口与全库分析任务已删除，简报摘要和重要性评分所需的共用计算保留。
+SIGNAL 是面向个人使用的科技情报与研究工作台，将 arXiv、GitHub、Hacker News 和 RSS/Atom 的内容汇集到同一个空间。你可以从三维太阳系进入不同领域，阅读每日简报、追踪开源项目，再将值得保留的内容整理进自己的研究库。
 
-![SIGNAL Universe](screenshots/spacecraft-overview.png)
+## 界面预览
 
-全景中的低多边形飞船已放大为原来的两倍，体长约为社区星球直径的三分之二。初始绕 AI 前沿飞行，选择星球后自动飞往该星球并绕行；返回全景时继续围绕上次选择的星球。飞船不再提供控制入口、手动驾驶或模式切换。场景暂停和减少动态效果也会暂停飞船。
+### 宇宙全景
 
-实现、路由映射、清理与验证记录见 [UNIVERSE-AUDIT.md](docs/UNIVERSE-AUDIT.md)。
+太阳是每日简报入口，六颗星球对应不同的资讯领域与个人研究库。原创低多边形天体、随视角变化的程序化银河，以及自动绕星飞行的小飞船，共同构成首页。
 
-**Discover what matters. Understand what changes. Track what comes next.**
+![SIGNAL Universe 宇宙全景](screenshots/全景.png)
 
-SIGNAL is a personal intelligence workbench for tracking AI breakthroughs, model releases, research papers, and emerging technology trends.
+### 星球内阅读
 
-It goes beyond headlines to help you understand **what changed, why it matters, and what is worth exploring next.**
+点击星球后，镜头飞向它的真实轨道；抵达后在同一场景中展开阅读面板，可以继续浏览资讯和查看详情。
 
-中文简介：SIGNAL 是一个个人 AI 与前沿科技情报工作台，聚焦 AI 模型、数学与计算机科学、具身智能、科研突破，以及 GitHub 上的新兴技术趋势。
-## ✦ Screenshots
+![社区星球与场景内资讯阅读](screenshots/社区星球展示.png)
 
-![DailyBrief](screenshots/dailybrief.png)
+## 现在可以做什么
 
----
+### 在太阳系里探索资讯
 
-## ✦ Focus Areas
+- **三维导航**：星球持续公转与自转，外侧星球公转更慢；支持拖动视角、缩放和键盘选择。
+- **场景内阅读**：镜头跟随选中星球的公转，阅读时保留宇宙背景；返回全景后可切换其他板块。
+- **自动跟随飞船**：初始围绕 AI 前沿飞行，选择其他天体后自动飞往并环绕目标。
+- **真实更新信号**：根据本地数据展示内容总量、24 小时新增与更新时间，可关闭更新提示。
+- **适配不同浏览方式**：支持移动端、暂停动画、系统“减少动态效果”偏好和普通导航；WebGL 不可用时仍可访问内容。
 
-| Domain | What to Track |
+| 入口 | 内容 |
 |---|---|
-| **AI Models** | New releases, capability shifts, reasoning, multimodal AI |
-| **AI × Science** | Mathematics, theorem proving, algorithms, scientific discovery |
-| **Physical AI** | Robotics, VLA, world models, robot learning |
-| **Agents & Coding** | AI agents, coding tools, inference and infrastructure |
-| **Open Source** | Emerging repositories, developer tools, project momentum |
-| **Frontier Science** | Selected breakthroughs in physics, biology, energy and beyond |
+| 太阳 · 每日简报 | 今天值得关注的资讯、核心变化与阅读重点 |
+| AI 前沿 | AI 模型、智能体、编程工具与基础设施 |
+| 研究 | AI 研究、数学、计算机科学与论文方法 |
+| 开源 | GitHub 仓库、开发工具与项目趋势 |
+| 社区 | Hacker News 与已接入 RSS 的技术讨论和早期信号 |
+| 科学 | 具身智能、机器人与其他前沿科学进展 |
+| 研究库 | 收藏、稍后阅读、笔记、研究合集与后续追踪 |
 
-## ✦ Features
+社区目前接入 Hacker News 和 RSS，尚未接入 X 数据源。每日简报、探索、深度研究、主题、趋势和研究库也保留独立页面入口。
 
-| Feature | Status |
-|---|---|
-| Daily intelligence briefing | Available; manual refresh from the page |
-| AI-powered article analysis | Available; DeepSeek-compatible LLM with rule-based fallback |
-| Briefing-scoped analysis | Available; only selected items that lack an analysis are sent to the model |
-| Personal library, notes & collections | Available |
-| Topic subscriptions & weekly review | Available |
-| GitHub trend tracking | Available |
-| Scheduled ingestion & analysis | Available |
-| Search and research exploration | Available |
+### 用简报筛选重点，按需调用模型
 
-All primary pages — Daily Briefing, Explore, Research, Topics, Trends, and
-Library — render real records collected from the connected sources. No sample or
-placeholder content is served in production.
+每日简报从最近 24 小时的资讯中筛选内容，支持手动更新、未读筛选、批量标记已读和历史简报回看。
 
-### Preferences
+重要性评分由规则计算，综合个人关注权重、技术变化与时效、潜在影响、证据可核查性、学习与复用价值，并可查看分项依据。评分用于阅读排序，不代表真实性或独立验证结论。
 
-| Preference | Effect |
-|---|---|
-| Focus-area weights | Stored server-side (`focus_weights`) and used by the importance calculation |
-| Daily signal count | Passed to `/api/briefing?count=` and caps the number of briefing items |
-| Default sorting | Used as the initial Explore sort order until you change it in the view |
-| Theme | Unified dark interface |
+配置模型后，系统只为**入选简报且尚无有效模型分析**的条目生成摘要与解读，包括关键变化、证据、为什么重要、局限与个人相关性；已有分析会复用，避免对全库逐篇调用模型。未配置模型密钥时，内置规则引擎仍可完成基础分析与评分。
 
-Preferences other than focus-area weights live in `localStorage` because SIGNAL has no
-account system yet.
+### 把阅读积累成个人研究库
 
-## ✦ How It Works
+- **收藏与稍后阅读**：统一管理阅读队列、已读状态和笔记。
+- **研究合集**：收藏时选择合集，也可以直接创建新合集。
+- **后续进展**：基于仓库标识、模型系列与 arXiv 论文编号，匹配本地已采集内容中的新进展。
+- **持续回顾**：支持主题订阅、关键词、每周回顾与相关内容建议。
+- **Markdown 导出**：导出选中条目或当前筛选结果，保留摘要、关键变化、来源链接和研究笔记。
 
-SIGNAL collects, analyzes, and organizes technology intelligence into a searchable personal knowledge base.
+### 汇集多源信息，保留原始出处
 
-1. **Collect** — Retrieve articles and research from arXiv RSS/API, GitHub, RSS feeds, and Hacker News.
-2. **Select** — Build today's briefing from the 24h window. Importance is a deterministic
-   score (focus weights + novelty + impact + verifiability + learning), so selection needs
-   no model call and never waits on one.
-3. **Analyze** — Only the items that made the briefing are sent to the LLM, and only when
-   they do not already have a real analysis; anything with an existing analysis is skipped.
-   A refresh therefore costs at most *daily signal count* model calls, not one per new
-   article. Selected items get an LLM-written one-line summary, key change, evidence,
-   **why it matters, limitations and personal relevance**, while scoring stays deterministic.
-   Without `LLM_ANALYZER_API_KEY` the rule-based engine keeps the pipeline working. An
-   analysis that comes back missing those fields is never stored, so the interface cannot
-   show a placeholder as if it were analysis.
-4. **Track** — Save discoveries, organize research, and review developments over time.
+支持 arXiv 每日公告 RSS 与 API、GitHub REST API、Hacker News，以及自定义 RSS/Atom 订阅源；提供全局搜索、领域筛选、排序、分页与同事件聚合。
 
-Every stored article gets a free deterministic baseline analysis on ingest, so Explore,
-Research and Topics stay complete while the paid analysis is reserved for the briefing.
-The standalone Analysis page and full-archive analysis action have been removed.
+GitHub 趋势页面用于发现值得关注的仓库与项目动向。采集支持手动触发和可选的定时任务，也可按来源暂停，保留历史记录。列表与简报使用实际采集数据，原文链接始终可访问。
 
-Original sources remain accessible. Official claims, preprints, peer-reviewed research, and independent verification are treated as distinct forms of evidence.
+## 工作方式
 
-## ✦ Tech Stack
+1. **采集**：从已启用的数据源获取内容并存入本地 SQLite。
+2. **筛选**：使用规则评分和个人关注权重，选出每日简报内容。
+3. **解读**：为入选且缺少有效模型分析的条目按需调用模型，其他内容保留规则分析。
+4. **沉淀**：通过收藏、笔记、合集、进展提醒与导出，持续积累研究资料。
 
-- **Framework:** Next.js 16, React 19, TypeScript
-- **Styling:** Tailwind CSS v4, CSS variables, Lucide
-- **Database:** SQLite via Node.js `node:sqlite`
-- **Data sources:** arXiv daily RSS, arXiv export API, GitHub REST API, Hacker News, RSS/Atom
-  (arXiv and GitHub collection can be paused per source)
-- **Analysis:** Rule-based engine with optional OpenAI-compatible LLM integration
-  (verified against the DeepSeek API; each article is one chat completion)
-- **Testing:** Vitest, ESLint, TypeScript, Next.js build
+当前版本的模型解读融入简报与阅读流程，不再提供独立分析页面或全库模型分析操作。
 
-## ✦ Getting Started
+## 本地运行
 
-### Requirements
-
-- Node.js ≥ 22.5
-- npm
-
-### Installation
+需要 Node.js ≥ 22.5 和 npm，数据库使用 Node.js 内置的 `node:sqlite`。
 
 ```bash
 npm install
-cp .env.example .env.local
+```
+
+复制 `.env.example` 为 `.env.local`。Windows PowerShell 可执行：
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+然后启动：
+
+```bash
 npm run dev
 ```
 
-Open the URL printed in your terminal. The port is set in `package.json`
-(`"dev": "next dev -p 2026"`), so this checkout serves `http://localhost:2026`.
+打开 [http://localhost:2026](http://localhost:2026)。数据库会在首次访问数据接口时自动初始化，默认保存在 `.data/signal.db`。首次使用需要采集资讯，可通过每日简报的手动更新操作触发。
 
-The SQLite database is initialized automatically on first access.
+### 常用命令
 
-### Desktop launcher (Windows)
-
-`SIGNAL.bat` on the desktop is a thin wrapper around `scripts/launch.ps1`. It:
-
-1. finds the project (the folder next to the `.bat` that owns `scripts/launch.ps1`);
-2. reads the port from `package.json`;
-3. opens the browser immediately if the site already answers, otherwise starts
-   `npm run dev` in a minimised console and waits for it;
-4. warms the data routes (`/api/signals/stats`, `/api/briefing`, …) before opening
-   the browser, because Next compiles each route on first request and an
-   unwarmed page would sit on zeroed counters;
-5. allows only one launcher at a time, so an impatient double-click cannot spawn
-   two dev servers.
-
-Every run appends to `%TEMP%\signal-launch.log`; if the launch fails the console
-window prints that log and waits for a key press. Closing the minimised
-"dev server" console stops the server.
-
-### Available Commands
-
-```bash
-npm run dev        # Development server
-npm run build      # Production build
-npm run start      # Production server
-npm run lint       # Lint checks
-npm run typecheck  # TypeScript checks
-npm test           # Unit tests
-npm run test:e2e   # Browser tests; run build first, requires installed Chrome
-```
-
-## ✦ Configuration
-
-All environment variables are optional. arXiv and GitHub can work without API keys, subject to service rate limits.
-
-Sources can be paused individually with `SIGNAL_DISABLED_PROVIDERS`. A paused source
-makes no outbound request, keeps its historical rows, and is reported as "paused" in
-Settings and Trends.
-
-| Variable | Purpose |
+| 命令 | 用途 |
 |---|---|
-| `GITHUB_TOKEN` | Higher GitHub API rate limits (60 → 5000/h); verify it via Settings → GitHub 认证 |
-| `LLM_ANALYZER_API_KEY` | Enable LLM-based analysis (why it matters, limitations, personal relevance) |
-| `LLM_ANALYZER_BASE_URL` | OpenAI-compatible API endpoint |
-| `LLM_ANALYZER_MODEL` | Analysis model |
-| `LLM_ANALYZER_TIMEOUT_MS` | Per-request timeout, default 90000 |
-| `RSS_FEEDS` | Additional RSS/Atom feeds |
-| `ARXIV_RSS_CATEGORIES` | arXiv daily announcement categories to follow |
-| `SIGNAL_DISABLED_PROVIDERS` | Pause automatic collection per source (e.g. `arxiv,github`) |
-| `SIGNAL_MIN_REQUEST_INTERVAL_MS` | Outbound request pacing (arXiv stays ≥3000) |
-| `SIGNAL_SCHEDULER_ENABLED` | Enable scheduled processing |
-| `SIGNAL_ADMIN_TOKEN` | Protect manual/admin endpoints |
-| `SIGNAL_DB_PATH` | Custom SQLite database path |
+| `npm run dev` | 启动开发服务，端口 2026 |
+| `npm run build` | 创建生产构建 |
+| `npm run start` | 启动生产服务，端口 2026，需先构建 |
+| `npm run lint` | ESLint 检查 |
+| `npm run typecheck` | TypeScript 类型检查 |
+| `npm test` | 单元测试 |
+| `npm run test:e2e` | 浏览器回归测试；需先构建并安装 Chrome |
 
-See `.env.example` and [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for additional configuration and operational details.
+Windows 启动脚本位于 `scripts/launch.ps1`；如已配置桌面 `SIGNAL.bat`，可双击启动。脚本会检查已有服务、预热数据接口并打开浏览器，启动日志写入 `%TEMP%\signal-launch.log`。
 
-## ✦ Roadmap
+## 配置
 
-- [x] Validate DeepSeek-powered analysis end to end (why it matters, limitations, personal relevance)
-- [x] Select the briefing before analyzing; analyze only selected items that lack one
-- [ ] Improve model-version and capability comparisons
-- [ ] Build reliable multi-day trend measurements
-- [ ] Add researcher/community signal tracking beyond arXiv
-- [ ] Introduce browser-based end-to-end tests
+所有环境变量均为可选项。arXiv、GitHub 等来源可在无密钥时工作，受各自服务限额约束；自定义 RSS 需要填写订阅地址，模型解读需要填写相应 API 配置。
 
-## ✦ Security & Privacy
+| 环境变量 | 作用 |
+|---|---|
+| `GITHUB_TOKEN` | 提升 GitHub API 请求限额，可在设置页验证认证 |
+| `RSS_FEEDS` | 自定义 RSS/Atom 地址，多个地址用逗号分隔 |
+| `ARXIV_RSS_CATEGORIES` | arXiv 订阅分类，默认 `cs.AI,cs.LG,cs.RO,cs.CL,cs.SE` |
+| `SIGNAL_DISABLED_PROVIDERS` | 暂停指定来源，如 `arxiv,github`，保留历史数据 |
+| `LLM_ANALYZER_API_KEY` | 启用模型解读 |
+| `LLM_ANALYZER_BASE_URL` | OpenAI 兼容接口地址，支持 DeepSeek 等服务 |
+| `LLM_ANALYZER_MODEL` | 使用的模型名称 |
+| `LLM_ANALYZER_TIMEOUT_MS` | 单次模型请求超时，默认 90000 毫秒 |
+| `SIGNAL_SCHEDULER_ENABLED` | 是否启用进程内定时任务，默认 `false` |
+| `SIGNAL_SCHEDULER_INTERVAL_MS` | 定时任务间隔，默认 6 小时 |
+| `SIGNAL_MIN_REQUEST_INTERVAL_MS` | 出站请求最小间隔；arXiv 至少为 3000 毫秒 |
+| `SIGNAL_ADMIN_TOKEN` | 为手动更新及管理接口配置访问令牌 |
+| `SIGNAL_DB_PATH` | 自定义 SQLite 数据库路径 |
 
-- Designed for single-user, local deployment.
-- Never commit API keys or private environment files.
-- External content and model outputs are treated as untrusted input.
-- AI-generated analysis should be verified against original sources.
+关注领域权重保存在服务端并参与评分；每日简报条数、默认排序等其他偏好保存在当前浏览器。项目目前没有账号系统，界面采用统一深色风格。
 
-Do not expose the application to untrusted networks without appropriate access controls.
+完整配置示例见 [.env.example](.env.example)，部署与运维说明见[运行手册](docs/RUNBOOK.md)，阅读与评分细节见[研究工作流](docs/RESEARCH-WORKFLOW.md)，三维场景的演进记录见[宇宙实施记录](docs/UNIVERSE-AUDIT.md)。历史文档中的旧页面和截图记录以当前代码及本 README 为准。
 
-## ✦ License
+## 技术栈
 
-Released under the [MIT License](./LICENSE).
+| 部分 | 技术 |
+|---|---|
+| 应用框架 | Next.js 16、React 19、TypeScript |
+| 三维场景 | Three.js、程序化低多边形模型与银河背景 |
+| 界面样式 | Tailwind CSS v4、CSS 变量、Lucide 图标 |
+| 数据存储 | SQLite，使用 Node.js 内置 `node:sqlite` |
+| 内容解读 | 规则引擎 + 可选的 OpenAI 兼容模型接口 |
+| 质量检查 | Vitest、Playwright、ESLint、TypeScript |
 
-This license applies to SIGNAL's own code, not third-party dependencies, external content, or trademarks.
+## 数据与隐私
+
+项目面向个人本地部署。采集内容、简报与研究库保存在本地数据库中；阅读状态及部分偏好保存在浏览器中。启用模型解读后，入选条目的内容会发送至所配置的模型服务。API 密钥仅由服务端读取，请勿提交 `.env.local` 或真实密钥。
+
+外部内容和模型解读应结合原文判断。若向非受信任网络开放服务，需要配置适当的访问控制。
+
+## 许可证
+
+项目代码采用 [MIT 许可证](LICENSE)。第三方依赖、外部内容与商标遵循各自的许可条款。
