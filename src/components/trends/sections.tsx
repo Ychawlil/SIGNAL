@@ -1,4 +1,5 @@
 "use client";
+import { displayLabel } from "@/lib/display-label";
 
 import { AlertTriangle, ExternalLink, FlaskConical, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ export function CoveragePanel({ coverage }: { coverage: TrendCoverage }) {
   return (
     <div className="rounded-lg border border-border bg-panel p-4">
       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-        Data coverage
+        数据覆盖
       </p>
       <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
         指标采样时间：{new Date(coverage.sampledAt).toLocaleString()}
@@ -27,7 +28,7 @@ export function CoveragePanel({ coverage }: { coverage: TrendCoverage }) {
             variant={coverage.github.collectionEnabled ? "accent" : "warning"}
             className="mx-1 font-mono uppercase tracking-wide"
           >
-            {coverage.github.collectionEnabled ? "collecting" : "paused"}
+            {coverage.github.collectionEnabled ? "采集中" : "已暂停"}
           </Badge>
           跟踪 {coverage.github.reposTracked} 个仓库、{coverage.github.snapshots} 次快照
           {coverage.github.latestSnapshotAt
@@ -44,7 +45,7 @@ export function CoveragePanel({ coverage }: { coverage: TrendCoverage }) {
             variant={coverage.arxiv.collectionEnabled ? "accent" : "warning"}
             className="mx-1 font-mono uppercase tracking-wide"
           >
-            {coverage.arxiv.collectionEnabled ? "collecting" : "paused"}
+            {coverage.arxiv.collectionEnabled ? "采集中" : "已暂停"}
           </Badge>
           {coverage.arxiv.articles} 篇已采集论文
           {coverage.arxiv.latestArticleAt
@@ -62,7 +63,7 @@ export function ReleaseList({ releases }: { releases: ReleaseSignal[] }) {
     return (
       <EmptyState
         icon={<TrendingUp />}
-        title="No releases detected"
+        title="尚未发现发布动态"
       />
     );
   }
@@ -72,20 +73,20 @@ export function ReleaseList({ releases }: { releases: ReleaseSignal[] }) {
         <li key={release.id} className="rounded-md border border-border bg-panel p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="font-mono uppercase tracking-wide">
-              {release.category}
+              {displayLabel(release.category)}
             </Badge>
             <Badge
               variant={release.claimOrigin === "independent" ? "accent" : "warning"}
               className="font-mono uppercase tracking-wide"
             >
-              {release.claimOrigin}
+              {displayLabel(release.claimOrigin)}
             </Badge>
             {release.license && <Badge variant="muted">{release.license}</Badge>}
             {release.openWeights !== null && (
-              <Badge variant="muted">{release.openWeights ? "open weights" : "not open"}</Badge>
+              <Badge variant="muted">{release.openWeights ? "开放权重" : "未开放权重"}</Badge>
             )}
             <span className="ml-auto font-mono text-[11px] tabular-nums text-muted-foreground">
-              relevance {release.relevance} · evidence {release.evidenceQuality}
+              相关性 {release.relevance} · 证据质量 {release.evidenceQuality}
             </span>
           </div>
           <a
@@ -107,7 +108,7 @@ export function ResearcherSignalList({ signals }: { signals: ResearcherSignal[] 
   return (
     <div className="flex flex-col gap-3">
       {signals.length === 0 ? (
-        <EmptyState icon={<FlaskConical />} title="No researcher signals" />
+        <EmptyState icon={<FlaskConical />} title="暂无研究者动态" />
       ) : (
         <ul className="flex flex-col gap-2">
           {signals.map((signal) => (
@@ -140,19 +141,19 @@ export function ResearcherSignalList({ signals }: { signals: ResearcherSignal[] 
 
 export function EmergingTopicList({ topics }: { topics: EmergingTopic[] }) {
   if (topics.length === 0) {
-    return <EmptyState icon={<TrendingUp />} title="No emerging topics yet" />;
+    return <EmptyState icon={<TrendingUp />} title="暂无新兴主题" />;
   }
   return (
     <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {topics.map((topic) => (
-        <li key={topic.topic} className="rounded-md border border-border bg-panel p-3">
+        <li key={topic.label} className="rounded-md border border-border bg-panel p-3">
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-sm font-semibold text-foreground">
-              {topic.topic}
+              {topic.label}
             </span>
             {topic.growth === null ? (
               <Badge variant="warning" className="font-mono">
-                new
+                新增
               </Badge>
             ) : (
               <Badge
@@ -165,7 +166,7 @@ export function EmergingTopicList({ topics }: { topics: EmergingTopic[] }) {
             )}
           </div>
           <p className="mt-1 font-mono text-[11px] tabular-nums text-muted-foreground">
-            {topic.count} 条 / {topic.windowDays}d
+            {topic.count} 条 / {topic.windowDays} 天
           </p>
           <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{topic.note}</p>
         </li>
@@ -186,14 +187,14 @@ export function EarlySignalList({ signals }: { signals: EarlySignal[] }) {
   return (
     <ul className="flex flex-col gap-2">
       {signals.map((signal) => (
-        <li key={`${signal.kind}-${signal.id}`} className="rounded-md border border-warning/40 bg-panel p-3">
+        <li key={`${displayLabel(signal.kind)}-${signal.id}`} className="rounded-md border border-warning/40 bg-panel p-3">
           <div className="flex items-center gap-2">
             <Badge variant="warning" className="font-mono uppercase tracking-wide">
-              {signal.kind}
+              {displayLabel(signal.kind)}
             </Badge>
             {signal.popularity !== null && (
               <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                stars {signal.popularity}
+                星标数 {signal.popularity}
               </span>
             )}
           </div>

@@ -7,23 +7,18 @@ import {
   clampBriefingItems,
   generateBriefing,
 } from "./briefing";
-import { extractModelInfo } from "./model-extractor";
 import { RULE_BASED_PLACEHOLDERS } from "./placeholders";
 import {
-  countAnalyzed,
   getBriefing,
   listAnalysesSince,
   listArticleRowsSince,
-  listModelFamilies,
-  listStaleAnalysisArticleIds,
   listUnanalyzedArticleIds,
   saveAnalysis,
   saveBriefing,
-  saveModelVersion,
   type AnalyzedArticleRow,
 } from "./store";
 import type { StoredArticle } from "../types";
-import type { AnalysisResult, DailyBriefing, ModelFamily } from "./types";
+import type { AnalysisResult, DailyBriefing } from "./types";
 import { BRIEFING_SCHEMA_VERSION } from "./types";
 
 function getArticleById(id: number): StoredArticle | null {
@@ -55,131 +50,6 @@ function safeJson<T>(value: string, fallback: T): T {
   } catch {
     return fallback;
   }
-}
-
-export interface AnalysisRunSummary {
-  engine: string;
-  engineMessage: string;
-  analyzed: number;
-  /** Items re-analyzed because the stored text came from another engine. */
-  refreshed: number;
-  /** Items the engine failed on; they keep their previous analysis. */
-  failed: number;
-  failedSample: string | null;
-  models: number;
-  totalAnalyzed: number;
-}
-
-/**
- * Upper bound on the per-run upgrade pass. The briefing window is small
- * (24h) but each LLM call costs seconds and tokens, so the cap keeps a manual
- * refresh bounded; repeated updates converge on the whole window.
- */
-const REFRESH_LIMIT = 20;
-
-/** Analyze anything missing, then upgrade stale analyses inside the window. */
-export async function ensureAnalysis(force = false): Promise<AnalysisRunSummary> {
-  const engine = getAnalysisEngine();
-  // Loaded once per run: every article in this batch is scored with the
-  // user's current focus weights.
-  const weights = getFocusWeights();
-  const ids = force
-    ? (() => {
-        const database = getDb();
-        // Rebuilding the model registry from scratch keeps it consistent
-        // with any model-extraction heuristic changes.
-        database.prepare(`DELETE FROM model_versions`).run();
-        return (
-          database
-            .prepare(`SELECT id FROM articles ORDER BY published_at DESC LIMIT 500`)
-            .all() as { id: number }[]
-        ).map((r) => Number(r.id));
-      })()
-    : listUnanalyzedArticleIds();
-
-  const run = {
-    analyzed: 0,
-    refreshed: 0,
-    failed: 0,
-    failedSample: null as string | null,
-    models: 0,
-  };
-
-  const analyzeOne = async (id: number): Promise<boolean> => {
-    const article = getArticleById(id);
-    if (!article) return false;
-
-    const result = await engine.analyze(article, weights);
-    saveAnalysis(result, engine.id);
-
-    const model = extractModelInfo(article);
-    if (model) {
-      saveModelVersion({
-        family: model.family,
-        name: model.name,
-        version: model.version,
-        sourceArticleId: article.id,
-        reasoning: null,
-        math: null,
-        coding: null,
-        multimodal: null,
-        agent: null,
-        params: model.params,
-        contextLength: null,
-        latency: null,
-        cost: null,
-        openWeights: model.openWeights,
-        apiAvailable: null,
-        license: model.license,
-        deployment: null,
-        benchmarks: model.benchmarks,
-        evalNote: model.evalNote,
-        claimOrigin: model.claimOrigin,
-        updatedAt: new Date().toISOString(),
-      });
-      run.models += 1;
-    }
-    return true;
-  };
-
-  const attempt = async (id: number, bucket: "analyzed" | "refreshed") => {
-    try {
-      if (await analyzeOne(id)) run[bucket] += 1;
-    } catch (error) {
-      // One bad article must not abort the run: keep the previous analysis
-      // (the briefing simply will not show it) and report the failure.
-      run.failed += 1;
-      if (!run.failedSample) {
-        run.failedSample = error instanceof Error ? error.message : String(error);
-      }
-    }
-  };
-
-  for (const id of ids) {
-    await attempt(id, "analyzed");
-  }
-
-  // The briefing only renders the last 24h, so that is the only set worth
-  // paying model calls for on every manual update. Rule-engine rows written
-  // before an API key existed get upgraded here.
-  if (engine.id !== "rule-based") {
-    const since = new Date(Date.now() - 25 * 3600000).toISOString();
-    const stale = listStaleAnalysisArticleIds(since, engine.id, REFRESH_LIMIT);
-    for (const id of stale) {
-      await attempt(id, "refreshed");
-    }
-  }
-
-  return {
-    engine: engine.id,
-    engineMessage: engine.availabilityMessage(),
-    ...run,
-    totalAnalyzed: countAnalyzed(),
-  };
-}
-
-export function getModelRegistry(): ModelFamily[] {
-  return listModelFamilies();
 }
 
 export function getDailyBriefing(

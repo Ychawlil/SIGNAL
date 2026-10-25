@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FolderOpen, Plus, Tag, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { libraryApi } from "./api";
 import type {
   CollectionItem,
-  CustomKeyword,
-  CustomTopic,
   LearningPlan,
   ResearchCollection,
   WeeklyReview,
@@ -84,7 +81,7 @@ export function CollectionsTab({
       <Card>
         <CardContent className="p-4">
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            New research collection
+            新建研究合集
           </p>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -93,18 +90,18 @@ export function CollectionsTab({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="专题标题，例如：VLA 与机器人操作"
                 className="sm:flex-1"
-                aria-label="Collection title"
+                aria-label="合集名称"
               />
               <Button variant="primary" size="sm" onClick={create} disabled={!title.trim()}>
                 <Plus className="h-3.5 w-3.5" />
-                Create
+                创建
               </Button>
             </div>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="专题说明（可选）"
-              aria-label="Collection description"
+              aria-label="合集说明"
             />
           </div>
         </CardContent>
@@ -138,7 +135,7 @@ export function CollectionsTab({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Delete collection"
+                  aria-label="删除合集"
                   onClick={() =>
                     libraryApi
                       .deleteCollection(collection.id)
@@ -158,7 +155,7 @@ export function CollectionsTab({
                 <div className="border-t border-border px-4 pb-3 pt-2">
                   {items.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      暂无条目。在收藏条目卡片的「Add to collection」中把情报加入此专题。
+                      暂无条目。在收藏条目卡片的「加入合集」中把情报加入此专题。
                     </p>
                   ) : (
                     <ul className="flex flex-col gap-1.5">
@@ -178,7 +175,7 @@ export function CollectionsTab({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            aria-label="Remove from collection"
+                            aria-label="移出合集"
                             onClick={() =>
                               libraryApi
                                 .removeCollectionItem(collection.id, item.articleId)
@@ -199,153 +196,6 @@ export function CollectionsTab({
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ============================================================
-   Topics & keywords
-   ============================================================ */
-
-export function TopicsTab({
-  refreshToken,
-  onMutate,
-}: {
-  refreshToken: number;
-  onMutate: () => void;
-}) {
-  const [topics, setTopics] = useState<CustomTopic[] | null>(null);
-  const [keywords, setKeywords] = useState<CustomKeyword[] | null>(null);
-  const [topicName, setTopicName] = useState("");
-  const [topicDescription, setTopicDescription] = useState("");
-  const [keyword, setKeyword] = useState("");
-  const [keywordTopic, setKeywordTopic] = useState("");
-
-  const reload = () => {
-    libraryApi.topics().then((d) => setTopics(d.topics)).catch(() => {});
-    libraryApi.keywords().then((d) => setKeywords(d.keywords)).catch(() => {});
-  };
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([libraryApi.topics(), libraryApi.keywords()])
-      .then(([t, k]) => {
-        if (active) {
-          setTopics(t.topics);
-          setKeywords(k.keywords);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [refreshToken]);
-
-  const createTopic = () => {
-    if (!topicName.trim()) return;
-    libraryApi
-      .createTopic(topicName.trim(), topicDescription.trim())
-      .then(() => {
-        setTopicName("");
-        setTopicDescription("");
-        reload();
-        onMutate();
-      })
-      .catch(() => {});
-  };
-
-  const createKeyword = () => {
-    if (!keyword.trim()) return;
-    libraryApi
-      .createKeyword(keyword.trim(), keywordTopic ? Number(keywordTopic) : null)
-      .then(() => {
-        setKeyword("");
-        reload();
-        onMutate();
-      })
-      .catch(() => {});
-  };
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardContent className="p-4">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            Custom topics
-          </p>
-          <div className="flex flex-col gap-2">
-            <Input value={topicName} onChange={(e) => setTopicName(e.target.value)} placeholder="主题名称，例如：人形机器人数据" aria-label="Topic name" />
-            <Input value={topicDescription} onChange={(e) => setTopicDescription(e.target.value)} placeholder="简短介绍（可选）" aria-label="Topic description" />
-            <Button variant="primary" size="sm" onClick={createTopic} disabled={!topicName.trim()} className="self-start">
-              <Plus className="h-3.5 w-3.5" /> Add topic
-            </Button>
-          </div>
-          {topics === null ? (
-            <p className="mt-3 text-sm text-muted-foreground">加载中…</p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-1.5">
-              {topics.map((topic) => (
-                <li key={topic.id} className="flex items-center gap-2 text-sm">
-                  <Tag className="h-3.5 w-3.5 text-muted-accent" />
-                  <span className="min-w-0 flex-1 truncate text-foreground">{topic.name}</span>
-                  {topic.description && <span className="hidden text-xs text-muted-foreground sm:inline">{topic.description}</span>}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Delete topic"
-                    onClick={() => libraryApi.deleteTopic(topic.id).then(reload).catch(() => {})}
-                    className="text-muted-foreground hover:text-danger"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-4">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            Custom keywords
-          </p>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && createKeyword()} placeholder="关键词，例如：world model" aria-label="Keyword" className="flex-1" />
-              <Select value={keywordTopic} onChange={(e) => setKeywordTopic(e.target.value)} aria-label="Keyword topic" className="w-40">
-                <option value="">无主题</option>
-                {(topics ?? []).map((t) => (
-                  <option key={t.id} value={String(t.id)}>
-                    {t.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <Button variant="secondary" size="sm" onClick={createKeyword} disabled={!keyword.trim()} className="self-start">
-              <Plus className="h-3.5 w-3.5" /> Add keyword
-            </Button>
-          </div>
-          {keywords === null ? (
-            <p className="mt-3 text-sm text-muted-foreground">加载中…</p>
-          ) : (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {keywords.map((kw) => (
-                <Badge key={kw.id} variant="default" className="gap-1">
-                  {kw.keyword}
-                  <button
-                    aria-label="Delete keyword"
-                    onClick={() => libraryApi.deleteKeyword(kw.id).then(reload).catch(() => {})}
-                    className="text-muted-foreground hover:text-danger"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -385,7 +235,7 @@ export function WeeklyTab({ refreshToken }: { refreshToken: number }) {
       <Card>
         <CardContent className="p-5">
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            Weekly research review · {review.weekStart}
+            每周研究回顾 · {review.weekStart}
           </p>
           <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{review.note}</p>
 
@@ -445,7 +295,7 @@ export function WeeklyTab({ refreshToken }: { refreshToken: number }) {
       <Card>
         <CardContent className="p-5">
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            Learning suggestions
+            学习建议
           </p>
           <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{plan.disclaimer}</p>
           {plan.suggestions.length === 0 ? (

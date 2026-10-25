@@ -57,6 +57,8 @@ export interface IntelligenceItem {
   sourceUrl: string;
   publishedAt: string; // ISO 8601
   importanceScore: number; // 0–100
+  importanceFactors?: import("./server/analysis/types").AnalysisFactors | null;
+  evidenceBasis?: string;
   keyChange: string;
   whyItMatters: string;
   limitations: string;

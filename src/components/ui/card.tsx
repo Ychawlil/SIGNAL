@@ -5,7 +5,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-panel/85 backdrop-blur-sm",
+        "editorial-card rounded-2xl border border-border bg-panel",
         className,
       )}
       {...props}
@@ -19,7 +19,7 @@ export function CardHeader({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex items-start justify-between gap-3 p-4 pb-0", className)}
+      className={cn("flex items-start justify-between gap-3 p-5 pb-0", className)}
       {...props}
     />
   );
@@ -44,5 +44,5 @@ export function CardContent({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-4", className)} {...props} />;
+  return <div className={cn("p-5", className)} {...props} />;
 }

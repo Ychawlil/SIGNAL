@@ -16,13 +16,13 @@ export function SectionHeading({
   aside,
 }: SectionHeadingProps) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
-          <span className="tabular-nums text-accent">{index}</span>
+        <p className="flex items-center gap-2 text-[11px] font-medium tracking-[0.12em] text-muted-accent">
+          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent-soft font-mono text-[10px] tabular-nums text-accent">{index}</span>
           {label}
         </p>
-        <h2 className="mt-1.5 text-base font-semibold leading-6 text-foreground">
+        <h2 className="mt-2.5 text-lg font-semibold leading-7 tracking-tight text-foreground">
           {title}
         </h2>
         {description && (

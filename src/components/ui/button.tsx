@@ -8,9 +8,9 @@ type Size = "sm" | "md" | "icon" | "icon-sm";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-black/55 text-white border border-white/10 backdrop-blur-sm hover:bg-black/60 disabled:opacity-50",
+    "bg-accent text-accent-foreground border border-transparent shadow-sm hover:brightness-110 disabled:opacity-50",
   secondary:
-    "bg-panel-secondary/70 text-foreground border border-border hover:bg-panel-secondary/75 hover:border-border-strong disabled:opacity-50",
+    "bg-panel text-foreground border border-border hover:bg-panel-secondary hover:border-border-strong disabled:opacity-50",
   ghost:
     "bg-transparent text-muted-foreground hover:text-foreground hover:bg-panel-secondary/60 disabled:opacity-50",
   outline:
@@ -18,8 +18,8 @@ const variantClasses: Record<Variant, string> = {
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: "h-7 px-2.5 text-xs gap-1.5",
-  md: "h-9 px-3.5 text-sm gap-2",
+  sm: "h-8 px-3 text-xs gap-1.5",
+  md: "h-10 px-4 text-sm gap-2",
   icon: "h-9 w-9",
   "icon-sm": "h-7 w-7",
 };
@@ -34,7 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        "inline-flex select-none items-center justify-center rounded-md font-medium",
+        "inline-flex select-none items-center justify-center rounded-lg font-medium",
         "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2",
         "focus-visible:ring-accent/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         "disabled:cursor-not-allowed",

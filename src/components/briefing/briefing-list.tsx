@@ -22,11 +22,11 @@ export function BriefingList({ sections, onOpen }: BriefingListProps) {
     <section>
       <SectionHeading
         index="C"
-        label="Briefing"
-        title="Today's Briefing"
+        label="简报"
+        title="今日简报"
         aside={
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            {count} signals
+            {count} 条情报
           </span>
         }
       />
@@ -38,7 +38,7 @@ export function BriefingList({ sections, onOpen }: BriefingListProps) {
         <div className="flex flex-col gap-6">
           {sections.map((section) => (
             <div key={section.key} className="flex flex-col gap-2.5">
-              <h3 className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-accent">
+              <h3 className="mb-1 mt-2 border-l-2 border-accent/40 pl-3 text-xs font-medium tracking-wide text-muted-accent">
                 {section.title}
               </h3>
               {section.items.map((item) => (

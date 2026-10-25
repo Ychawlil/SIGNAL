@@ -6,8 +6,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
+  useState,
   type ReactNode,
 } from "react";
+import { CollectionPicker } from "@/components/library/collection-picker";
+import { libraryApi } from "@/components/library/api";
+import { getPersistentStore } from "@/lib/persistent-store";
+import { mergeLibrary } from "@/lib/backup";
 import { STORAGE_KEYS, TOPIC_NAMES } from "@/lib/constants";
 import { usePersistentState } from "@/lib/hooks";
 import { TOPICS } from "@/lib/topics";
@@ -38,7 +44,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = usePersistentState<Theme>(
     STORAGE_KEYS.theme,
     "dark",
-    (raw) => (raw === "light" ? "light" : "dark"),
+    () => "dark",
   );
 
   useEffect(() => {
@@ -46,9 +52,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.style.colorScheme = theme;
   }, [theme]);
 
-  const setTheme = useCallback((next: Theme) => setThemeState(next), [setThemeState]);
+  const setTheme = useCallback(() => setThemeState("dark"), [setThemeState]);
   const toggleTheme = useCallback(
-    () => setThemeState((prev) => (prev === "dark" ? "light" : "dark")),
+    () => setThemeState("dark"),
     [setThemeState],
   );
 
@@ -71,10 +77,13 @@ export function useTheme(): ThemeContextValue {
    ============================================================ */
 
 interface LibraryContextValue extends LibraryState {
+  importLibrary: (library: LibraryState) => Promise<void>;
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => void;
   isRead: (id: string) => boolean;
   toggleRead: (id: string) => void;
+  markRead: (ids: string[], read?: boolean) => void;
+  addToQueue: (id: string) => Promise<void>;
   getNote: (id: string) => string;
   setNote: (id: string, text: string) => void;
 }
@@ -105,38 +114,80 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [state.favoriteIds],
   );
 
-  const toggleFavorite = useCallback(
-    (id: string) =>
-      setState((prev) => {
-        const has = prev.favoriteIds.includes(id);
-        return {
-          ...prev,
-          favoriteIds: has
-            ? prev.favoriteIds.filter((f) => f !== id)
-            : [...prev.favoriteIds, id],
-        };
-      }),
-    [setState],
-  );
+  const [collectionTarget, setCollectionTarget] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const initialized = useRef(false);
+  const initialization = useRef<Promise<void> | null>(null);
+  const pending = useRef(new Set<string>());
+  const refreshVersion = useRef(0);
+  const refreshFavorites = useCallback(async () => {
+    const version = ++refreshVersion.current;
+    const data = await libraryApi.list({ status: "all" });
+    if (version !== refreshVersion.current) return;
+    setState((current) => {
+      const favoriteIds = data.items.map((item) => String(item.article.id));
+      const readIds = [...new Set([...current.readIds.filter((id) => !favoriteIds.includes(id)), ...data.items.filter((item) => item.status === "read").map((item) => String(item.article.id))])];
+      return { ...current, favoriteIds, readIds };
+    });
+    setSyncError(null);
+  }, [setState]);
+  const initialize = useCallback(async () => {
+    if (!initialization.current) {
+      initialization.current = (async () => {
+        const marker = "signal.favorites-migrated.v1";
+        if (!window.localStorage.getItem(marker)) {
+          const legacy = getPersistentStore(STORAGE_KEYS.library, DEFAULT_LIBRARY, reviveLibrary).getSnapshot();
+          if (legacy.favoriteIds.length) await libraryApi.migrate(legacy);
+          window.localStorage.setItem(marker, "1");
+        }
+        await refreshFavorites();
+        initialized.current = true;
+      })().catch((error: unknown) => { initialization.current = null; throw error; });
+    }
+    await initialization.current;
+  }, [refreshFavorites]);
+  useEffect(() => {
+    const report = (error: unknown) => setSyncError(`收藏同步失败：${error instanceof Error ? error.message : String(error)}`);
+    void initialize().catch(report);
+    const refresh = () => { void refreshFavorites().catch(report); };
+    window.addEventListener("signal-library-changed", refresh);
+    window.addEventListener("focus", refresh);
+    return () => { window.removeEventListener("signal-library-changed", refresh); window.removeEventListener("focus", refresh); };
+  }, [initialize, refreshFavorites]);
+  const toggleFavorite = useCallback((id: string) => {
+    if (pending.current.has(id)) return;
+    pending.current.add(id);
+    void (async () => {
+      await initialize();
+      if (!initialized.current) return;
+      const current = getPersistentStore(STORAGE_KEYS.library, DEFAULT_LIBRARY, reviveLibrary).getSnapshot();
+      if (current.favoriteIds.includes(id)) await libraryApi.unsave(Number(id));
+      else { await libraryApi.save(Number(id)); if (current.readIds.includes(id)) await libraryApi.update(Number(id), { status: "read" }); setCollectionTarget(id); }
+      await refreshFavorites();
+    })().catch((error: unknown) => setSyncError(`收藏操作失败：${error instanceof Error ? error.message : String(error)}`))
+      .finally(() => pending.current.delete(id));
+  }, [initialize, refreshFavorites]);
 
   const isRead = useCallback(
     (id: string) => state.readIds.includes(id),
     [state.readIds],
   );
 
-  const toggleRead = useCallback(
-    (id: string) =>
-      setState((prev) => {
-        const has = prev.readIds.includes(id);
-        return {
-          ...prev,
-          readIds: has
-            ? prev.readIds.filter((r) => r !== id)
-            : [...prev.readIds, id],
-        };
-      }),
-    [setState],
-  );
+  const markRead = useCallback((ids: string[], read = true) => {
+    const current = getPersistentStore(STORAGE_KEYS.library, DEFAULT_LIBRARY, reviveLibrary).getSnapshot();
+    setState((prev) => ({ ...prev, readIds: read ? [...new Set([...prev.readIds, ...ids])] : prev.readIds.filter((id) => !ids.includes(id)) }));
+    void Promise.all(ids.filter((id) => current.favoriteIds.includes(id)).map((id) => libraryApi.update(Number(id), { status: read ? "read" : "later" })))
+      .catch(() => setSyncError("阅读状态同步失败，请在研究库重试。"));
+  }, [setState]);
+  const toggleRead = useCallback((id: string) => {
+    const current = getPersistentStore(STORAGE_KEYS.library, DEFAULT_LIBRARY, reviveLibrary).getSnapshot();
+    markRead([id], !current.readIds.includes(id));
+  }, [markRead]);
+  const addToQueue = useCallback(async (id: string) => {
+    await initialize(); await libraryApi.save(Number(id)); await libraryApi.update(Number(id), { status: "later" });
+    setState((current) => ({ ...current, readIds: current.readIds.filter((readId) => readId !== id) }));
+    await refreshFavorites();
+  }, [initialize, refreshFavorites, setState]);
 
   const getNote = useCallback((id: string) => state.notes[id] ?? "", [state.notes]);
 
@@ -146,21 +197,34 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [setState],
   );
 
+  const importLibrary = useCallback(async (incoming: LibraryState) => {
+    await initialize();
+    await libraryApi.migrate(incoming);
+    setState((current) => mergeLibrary(current, incoming));
+    await refreshFavorites();
+  }, [initialize, refreshFavorites, setState]);
   const value = useMemo(
     () => ({
       ...state,
+      importLibrary,
       isFavorite,
       toggleFavorite,
       isRead,
       toggleRead,
+      markRead,
+      addToQueue,
       getNote,
       setNote,
     }),
-    [state, isFavorite, toggleFavorite, isRead, toggleRead, getNote, setNote],
+    [state, importLibrary, isFavorite, toggleFavorite, isRead, toggleRead, markRead, addToQueue, getNote, setNote],
   );
 
   return (
-    <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>
+    <LibraryContext.Provider value={value}>
+      {syncError && <div role="alert" className="fixed bottom-4 left-4 right-4 z-[80] mx-auto max-w-xl rounded-md border border-danger bg-panel p-4 text-sm text-danger">{syncError}<button className="ml-3 underline" onClick={() => { void (initialized.current ? refreshFavorites() : initialize()).catch((error: unknown) => setSyncError(String(error))); }}>重试同步</button></div>}
+      {children}
+      <CollectionPicker key={collectionTarget ?? "closed"} articleId={collectionTarget} onClose={() => setCollectionTarget(null)} />
+    </LibraryContext.Provider>
   );
 }
 

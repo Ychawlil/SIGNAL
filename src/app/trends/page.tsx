@@ -110,13 +110,13 @@ export default function TrendsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
+      <header className="page-header flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
-            Tech signals
+            技术动态
           </p>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
-            Trends
+            趋势
           </h1>
         </div>
         <Button
@@ -135,7 +135,7 @@ export default function TrendsPage() {
           ) : (
             <TrendingUp className="h-3.5 w-3.5" />
           )}
-          {githubPaused ? "Collection paused" : collecting ? "Collecting…" : "Collect data"}
+          {githubPaused ? "采集已暂停" : collecting ? "正在采集…" : "采集数据"}
         </Button>
       </header>
 
@@ -145,31 +145,31 @@ export default function TrendsPage() {
           value={range}
           onChange={setRange}
           options={[
-            { value: "7d", label: "Last 7 days" },
-            { value: "30d", label: "Last 30 days" },
+            { value: "7d", label: "最近 7 天" },
+            { value: "30d", label: "最近 30 天" },
           ]}
         />
         <Select
           value={topic}
           onChange={(e) => setTopic(e.target.value as TrendTopic)}
-          aria-label="Filter by topic"
+          aria-label="按主题筛选"
           className="w-full sm:w-52"
         >
-          <option value="all">All topics</option>
+          <option value="all">全部主题</option>
           <option value="vla">VLA</option>
-          <option value="robot-learning">Robot Learning</option>
-          <option value="world-model">World Models</option>
+          <option value="robot-learning">机器人学习</option>
+          <option value="world-model">世界模型</option>
           <option value="llm">LLM</option>
-          <option value="ai-agents">AI Agents</option>
-          <option value="ai-coding">AI Coding</option>
-          <option value="theorem-proving">Theorem Proving</option>
-          <option value="llm-inference">LLM Inference</option>
+          <option value="ai-agents">AI 智能体</option>
+          <option value="ai-coding">AI 编程</option>
+          <option value="theorem-proving">定理证明</option>
+          <option value="llm-inference">大模型推理服务</option>
         </Select>
         <Segmented<TrendSource>
           value={source}
           onChange={setSource}
           options={[
-            { value: "all", label: "All sources" },
+            { value: "all", label: "全部来源" },
             { value: "github", label: "GitHub" },
             { value: "arxiv", label: "arXiv" },
           ]}
@@ -193,14 +193,14 @@ export default function TrendsPage() {
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <RefreshCw className="h-4 w-4 animate-spin" />
-          Loading trends…
+          正在加载趋势…
         </div>
       ) : report ? (
         <>
           <CoveragePanel coverage={report.coverage} />
 
           <section>
-            <SectionHeader index="A" title="Rising Repositories" />
+            <SectionHeader index="A" title="上升中的项目" />
             {githubPaused && report.risingRepos.length > 0 && (
               <p className="mb-2.5 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs leading-5 text-warning">
                 GitHub 自动采集已暂停，以下指标来自历史快照
@@ -226,22 +226,22 @@ export default function TrendsPage() {
           </section>
 
           <section>
-            <SectionHeader index="B" title="Model & Tool Releases" />
+            <SectionHeader index="B" title="模型与工具发布" />
             <ReleaseList releases={report.releases} />
           </section>
 
           <section>
-            <SectionHeader index="C" title="Researcher Signals" />
+            <SectionHeader index="C" title="研究者动态" />
             <ResearcherSignalList signals={report.researcherSignals} />
           </section>
 
           <section>
-            <SectionHeader index="D" title="Emerging Topics" />
+            <SectionHeader index="D" title="新兴主题" />
             <EmergingTopicList topics={report.emergingTopics} />
           </section>
 
           <section>
-            <SectionHeader index="E" title="Early Signals — 待验证" />
+            <SectionHeader index="E" title="早期信号 · 待验证" />
             <EarlySignalList signals={report.earlySignals} />
           </section>
         </>

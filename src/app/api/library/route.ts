@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getArticleWithAnalysis,
   listSavedItems,
   saveItem,
   unsaveItem,
@@ -37,8 +38,9 @@ export async function POST(request: NextRequest) {
   }
   const articleId = Number(body.articleId);
   if (!Number.isInteger(articleId) || articleId <= 0) {
-    return NextResponse.json({ error: "articleId is required" }, { status: 400 });
+    return NextResponse.json({ error: "请提供有效的情报编号" }, { status: 400 });
   }
+  if (!getArticleWithAnalysis(articleId)) return NextResponse.json({ error: "情报不存在，无法收藏" }, { status: 404 });
   saveItem(articleId);
   return NextResponse.json({ ok: true, articleId });
 }
@@ -52,7 +54,7 @@ export async function DELETE(request: NextRequest) {
   }
   const articleId = Number(body.articleId);
   if (!Number.isInteger(articleId) || articleId <= 0) {
-    return NextResponse.json({ error: "articleId is required" }, { status: 400 });
+    return NextResponse.json({ error: "请提供有效的情报编号" }, { status: 400 });
   }
   unsaveItem(articleId);
   return NextResponse.json({ ok: true, articleId });
@@ -67,7 +69,7 @@ export async function PATCH(request: NextRequest) {
   }
   const articleId = Number(body.articleId);
   if (!Number.isInteger(articleId) || articleId <= 0) {
-    return NextResponse.json({ error: "articleId is required" }, { status: 400 });
+    return NextResponse.json({ error: "请提供有效的情报编号" }, { status: 400 });
   }
 
   const patch: { status?: SaveStatus | null; notes?: string; tags?: string[] } = {};
@@ -75,7 +77,7 @@ export async function PATCH(request: NextRequest) {
     if (body.status === null || STATUSES.includes(body.status)) {
       patch.status = body.status;
     } else {
-      return NextResponse.json({ error: "invalid status" }, { status: 400 });
+      return NextResponse.json({ error: "阅读状态无效" }, { status: 400 });
     }
   }
   if (body.notes !== undefined) patch.notes = String(body.notes).slice(0, 20000);

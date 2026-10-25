@@ -1,3 +1,7 @@
+"use client";
+import { useState } from "react";
+import { Drawer } from "@/components/ui/drawer";
+import { ScoreExplanation } from "./score-explanation";
 import { CATEGORY_MAP } from "@/lib/constants";
 import type { CategoryId } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -15,14 +19,18 @@ export function CategoryBadge({ category }: { category: CategoryId }) {
 export function ImportanceMeter({
   score,
   className,
+  articleId,
 }: {
   score: number;
+  articleId?: string;
   className?: string;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <span
-      className={cn("inline-flex items-center gap-2", className)}
-      title={`Importance ${score}/100`}
+    <span onClick={(event) => event.stopPropagation()}>
+    <button type="button" onClick={() => setOpen(true)} disabled={!articleId} aria-label={`查看重要性 ${score} 分的评分依据`}
+      className={cn("inline-flex items-center gap-2 rounded px-1 py-1 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent", className)}
+      title={`重要性 ${score}/100`}
     >
       <span className="h-1 w-14 overflow-hidden rounded-full bg-panel-secondary">
         <span
@@ -33,6 +41,8 @@ export function ImportanceMeter({
       <span className="font-mono text-xs tabular-nums text-muted-foreground">
         {score}
       </span>
+    </button>
+    {articleId && <Drawer open={open} onClose={() => setOpen(false)} title="重要性评分依据"><ScoreExplanation key={articleId} id={articleId} /></Drawer>}
     </span>
   );
 }

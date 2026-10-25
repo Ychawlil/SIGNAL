@@ -12,7 +12,7 @@ export const Select = forwardRef<
     <select
       ref={ref}
       className={cn(
-        "h-9 w-full cursor-pointer appearance-none rounded-md border border-border bg-panel",
+        "h-10 w-full cursor-pointer appearance-none rounded-lg border border-border bg-panel",
         "pl-3 pr-8 text-sm text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
         "disabled:cursor-not-allowed disabled:opacity-50",

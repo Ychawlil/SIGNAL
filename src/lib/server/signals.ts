@@ -1,4 +1,5 @@
 import "server-only";
+import { ensureScoringCurrent } from "./analysis/rescore";
 import { getDb } from "./db";
 import { TOPIC_CATEGORIES } from "@/lib/topics";
 import type { SignalRecord } from "@/lib/signals";
@@ -9,7 +10,10 @@ export interface SignalQuery {
   page: number;
   pageSize: number;
   q?: string;
+  ids?: number[];
+  excludeIds?: number[];
   category?: CategoryId;
+  categories?: readonly CategoryId[];
   topic?: TopicId;
   source?: string;
   provider?: ProviderId;
@@ -39,7 +43,7 @@ const SELECT = `
          a.authors, a.tags, a.metrics,
          an.one_liner, an.key_change, an.differences, an.evidence,
          an.limitations, an.impact, an.personal_relevance, an.further_reading,
-         an.importance_score,
+         an.importance_score, an.importance_factors, an.evidence_basis,
          an.is_model_release, an.model_family
   FROM articles a
   LEFT JOIN analyses an ON an.article_id = a.id
@@ -58,6 +62,8 @@ function rowToSignal(row: Record<string, unknown>): SignalRecord {
     authors: parseJson(String(row.authors ?? "[]"), [] as string[]),
     tags: parseJson(String(row.tags ?? "[]"), [] as string[]),
     importanceScore,
+    importanceFactors: parseJson(String(row.importance_factors ?? "null"), null),
+    evidenceBasis: String(row.evidence_basis ?? "none"),
     keyChange: String(row.key_change ?? ""),
     differences: String(row.differences ?? ""),
     evidence: String(row.evidence ?? ""),
@@ -87,13 +93,26 @@ export function listSignals(query: SignalQuery): {
   items: SignalRecord[];
   total: number;
 } {
+  ensureScoringCurrent();
   const database = getDb();
   const conditions: string[] = [];
   const params: (string | number)[] = [];
 
+  if (query.excludeIds?.length) {
+    conditions.push(`a.id NOT IN (${query.excludeIds.map(() => "?").join(",")})`);
+    params.push(...query.excludeIds);
+  }
+  if (query.ids) {
+    conditions.push(query.ids.length ? `a.id IN (${query.ids.map(() => "?").join(",")})` : "0 = 1");
+    params.push(...query.ids);
+  }
   if (query.provider) {
     conditions.push("a.provider = ?");
     params.push(query.provider);
+  }
+  if (query.categories?.length) {
+    conditions.push(`a.category IN (${query.categories.map(() => "?").join(",")})`);
+    params.push(...query.categories);
   }
   if (query.category && CATEGORY_IDS.includes(query.category)) {
     conditions.push("a.category = ?");
@@ -111,9 +130,9 @@ export function listSignals(query: SignalQuery): {
     params.push(query.source);
   }
   if (query.q) {
-    conditions.push("(a.title LIKE ? OR a.summary LIKE ?)");
+    conditions.push("(a.title LIKE ? OR a.summary LIKE ? OR a.tags LIKE ? OR a.source_name LIKE ?)");
     const like = `%${query.q}%`;
-    params.push(like, like);
+    params.push(like, like, like, like);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -137,6 +156,7 @@ export function listSignals(query: SignalQuery): {
 export interface SignalStats {
   total: number;
   last24h: number;
+  fetched24h: number;
   last7d: number;
   categoryCounts: Record<CategoryId, number>;
   topicCounts: Record<TopicId, number>;
@@ -157,6 +177,7 @@ export function signalStats(): SignalStats {
       .prepare(`SELECT COUNT(*) AS c FROM articles WHERE published_at >= ?`)
       .get(since24h) as { c: number }
   ).c;
+  const fetched24h = (database.prepare(`SELECT COUNT(*) AS c FROM articles WHERE fetched_at >= ?`).get(since24h) as { c: number }).c;
   const last7d = (
     database
       .prepare(`SELECT COUNT(*) AS c FROM articles WHERE published_at >= ?`)
@@ -188,5 +209,5 @@ export function signalStats(): SignalStats {
     .all() as { source: string }[];
   const sources = sourceRows.map((row) => row.source);
 
-  return { total, last24h, last7d, categoryCounts, topicCounts, sources };
+  return { total, last24h, fetched24h, last7d, categoryCounts, topicCounts, sources };
 }

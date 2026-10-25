@@ -85,6 +85,7 @@ function Test-SignalUp([string]$target, [int]$targetPort) {
 #>
 function Invoke-SignalWarmup {
     $routes = @(
+        '/api/universe',
         '/api/signals/stats',
         '/api/briefing?count=1',
         '/api/signals?pageSize=100&sort=importance',

@@ -2,6 +2,8 @@ import type { StoredArticle } from "../types";
 
 /** Importance scoring output (0–100), summed from five weighted factors. */
 export interface AnalysisFactors {
+  version?: number;
+  reasons?: Record<"relevance" | "novelty" | "impact" | "verifiability" | "learning", string>;
   /** Relevance to tracked focus areas (0–30). */
   relevance: number;
   /** Technical novelty (0–20). */
@@ -45,37 +47,6 @@ export interface AnalysisResult {
   isModelRelease: boolean;
   modelFamily: string | null;
   analyzedAt: string;
-}
-
-export interface ModelVersion {
-  family: string;
-  name: string;
-  version: string | null;
-  sourceArticleId: number | null;
-  reasoning: string | null;
-  math: string | null;
-  coding: string | null;
-  multimodal: string | null;
-  agent: string | null;
-  params: string | null;
-  contextLength: string | null;
-  latency: string | null;
-  cost: string | null;
-  openWeights: boolean | null;
-  apiAvailable: boolean | null;
-  license: string | null;
-  deployment: string | null;
-  benchmarks: string[];
-  evalNote: string;
-  claimOrigin: "vendor" | "independent" | "unknown";
-  updatedAt: string;
-}
-
-export interface ModelFamily {
-  family: string;
-  versions: ModelVersion[];
-  /** Honest comparison note; "缺乏可直接比较的证据" when fields are missing. */
-  comparisonNote: string;
 }
 
 export interface BriefingItem {

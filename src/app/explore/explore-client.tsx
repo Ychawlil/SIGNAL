@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { getPlanet } from "@/lib/universe/planets";
+import type { CSSProperties } from "react";
+import { groupEvents } from "@/lib/event-matching";
 import { LayoutGrid, List, RefreshCw, Search, SlidersHorizontal, Star } from "lucide-react";
 import { ItemCard } from "@/components/items/item-card";
 import { ItemDetail } from "@/components/items/item-detail";
@@ -56,8 +60,14 @@ function buildQuery(params: {
   source: string;
   sort: SortKey;
   page: number;
+  ids?: string[];
+  excludeIds?: string[];
+  planet?: string;
 }): string {
   const qs = new URLSearchParams();
+  if (params.planet) qs.set("planet", params.planet);
+  if (params.excludeIds?.length) qs.set("excludeIds", params.excludeIds.join(","));
+  if (params.ids) qs.set("ids", params.ids.join(","));
   qs.set("page", String(params.page));
   qs.set("pageSize", String(PAGE_SIZE));
   if (params.q.trim()) qs.set("q", params.q.trim());
@@ -78,13 +88,18 @@ async function requestSignals(
 }
 
 export function ExploreClient() {
-  const { isFavorite } = useLibrary();
+  const { favoriteIds, readIds, markRead } = useLibrary();
   const { settings } = useSettings();
   const searchParams = useSearchParams();
+  const planet = getPlanet(searchParams.get("planet"));
+  const planetId = planet?.id;
 
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
-  const [openId, setOpenId] = useState(() => searchParams.get("open") ?? null);
+  const [dismissedId, setDismissedId] = useState<string | null>(null);
+  const openId = searchParams.get("open") === dismissedId ? null : searchParams.get("open");
+  const [linkedItem, setLinkedItem] = useState<IntelligenceItem | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [category, setCategory] = useState<CategoryId | "all">(() => {
     const value = searchParams.get("category");
     return value && CATEGORIES.some((c) => c.id === value)
@@ -102,6 +117,8 @@ export function ExploreClient() {
   // picks a sort in this view we stop overriding their choice.
   const [explicitSort, setExplicitSort] = useState<SortKey | null>(null);
   const sort = explicitSort ?? settings.defaultSort;
+  const [readingFilter, setReadingFilter] = useState<"all" | "unread" | "read">("all");
+  const [groupMode, setGroupMode] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("list");
 
@@ -115,6 +132,10 @@ export function ExploreClient() {
   const [selected, setSelected] = useState<IntelligenceItem | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
 
+  const filterIds = favoritesOnly ? (readingFilter === "read" ? favoriteIds.filter((id) => readIds.includes(id)) : favoriteIds) : readingFilter === "read" ? readIds : undefined;
+  const queryIds = filterIds?.join(",");
+  const excludedIds = readingFilter === "unread" ? readIds.join(",") : "";
+  const generation = useRef(0);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce the search input before it drives a server request.
@@ -128,8 +149,9 @@ export function ExploreClient() {
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
+    generation.current += 1;
     requestSignals(
-      buildQuery({ q: debouncedQuery, category, topic, source, sort, page: 1 }),
+      buildQuery({ q: debouncedQuery, planet: planetId, category, topic, source, sort, ids: queryIds === undefined ? undefined : queryIds.split(",").filter(Boolean), excludeIds: excludedIds ? excludedIds.split(",") : undefined, page: 1 }),
       controller.signal,
     )
       .then((data) => {
@@ -152,7 +174,7 @@ export function ExploreClient() {
       active = false;
       controller.abort();
     };
-  }, [debouncedQuery, category, topic, source, sort, refreshToken]);
+  }, [debouncedQuery, category, topic, source, sort, refreshToken, queryIds, excludedIds, planetId]);
 
   useEffect(() => {
     let active = true;
@@ -169,17 +191,20 @@ export function ExploreClient() {
 
   const items = useMemo(() => records.map(toIntelligenceItem), [records]);
 
-  const visibleItems = useMemo(
-    () => (favoritesOnly ? items.filter((item) => isFavorite(item.id)) : items),
-    [favoritesOnly, items, isFavorite],
-  );
+  const visibleItems = items;
+  const eventGroups = groupMode ? groupEvents(items.map((item) => ({ id: Number(item.id), title: item.title, url: item.sourceUrl, publishedAt: item.publishedAt, view: item }))).map((entries) => entries.map((entry) => entry.view)) : items.map((item) => [item]);
+  const otherSources = (group: IntelligenceItem[]) => group.length > 1 ? <details className="mt-2 rounded-xl border border-border bg-panel p-3"><summary className="cursor-pointer text-xs text-accent">同一事件 · {group.length} 条来源</summary><ul className="mt-2 space-y-2">{group.slice(1).map((entry) => <li key={entry.id}><button className="text-left text-sm text-foreground hover:text-accent" onClick={() => setSelected(entry)}>{entry.title}</button><p className="text-xs text-muted-foreground">{entry.sourceName}</p></li>)}</ul></details> : null;
 
-  const openItem = useMemo(
-    () => (openId ? (items.find((item) => item.id === openId) ?? null) : null),
-    [openId, items],
-  );
-
-  const detailItem = selected ?? openItem;
+  useEffect(() => {
+    if (!openId) return;
+    const controller = new AbortController();
+    fetch(`/api/signals/${encodeURIComponent(openId)}`, { signal: controller.signal })
+      .then(async (r) => { if (!r.ok) throw new Error(r.status === 404 ? "情报不存在" : "详情加载失败"); return r.json() as Promise<SignalRecord>; })
+      .then((record) => { if (!controller.signal.aborted) { setLinkedItem(toIntelligenceItem(record)); setDetailError(null); } })
+      .catch((error: unknown) => { if (!controller.signal.aborted) setDetailError(String(error)); });
+    return () => controller.abort();
+  }, [openId]);
+  const detailItem = selected ?? (linkedItem?.id === openId ? linkedItem : null);
 
   const hasMore = records.length < total;
   const hasActiveFilters =
@@ -187,7 +212,7 @@ export function ExploreClient() {
     category !== "all" ||
     topic !== "all" ||
     source !== "all" ||
-    favoritesOnly;
+    favoritesOnly || readingFilter !== "all";
 
   const sources = stats?.sources ?? [];
 
@@ -198,39 +223,46 @@ export function ExploreClient() {
     setTopic("all");
     setSource("all");
     setFavoritesOnly(false);
+    setReadingFilter("all");
+    setLoading(true);
+    setRefreshToken((token) => token + 1);
   };
 
   const loadMore = () => {
+    const requestGeneration = generation.current;
     setLoadingMore(true);
     requestSignals(
-      buildQuery({ q: debouncedQuery, category, topic, source, sort, page: page + 1 }),
+      buildQuery({ q: debouncedQuery, planet: planetId, category, topic, source, sort, ids: queryIds === undefined ? undefined : queryIds.split(",").filter(Boolean), excludeIds: excludedIds ? excludedIds.split(",") : undefined, page: page + 1 }),
     )
       .then((data) => {
+        if (requestGeneration !== generation.current) return;
         setRecords((prev) => [...prev, ...data.items]);
         setTotal(data.total);
         setPage((prev) => prev + 1);
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
+      .catch((err: unknown) => { if (requestGeneration === generation.current) setError(err instanceof Error ? err.message : String(err)); })
       .finally(() => setLoadingMore(false));
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
+    <div className="flex flex-col gap-6" style={planet ? { "--accent": planet.color, "--accent-soft": `color-mix(in srgb, ${planet.color} 12%, var(--panel))` } as CSSProperties : undefined}>
+      {planet && <Link href="/" className="text-xs text-muted-foreground hover:text-accent">← 返回全景</Link>}
+      <header className="page-header flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
-            Intelligence
+            情报
           </p>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
-            Explore
+            {planet?.label ?? "探索"}
           </h1>
+          {planet && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{planet.description}</p>}
         </div>
         <Segmented<ViewMode>
           value={view}
           onChange={setView}
           options={[
-            { value: "list", label: "List", icon: <List className="h-3.5 w-3.5" /> },
-            { value: "grid", label: "Grid", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+            { value: "list", label: "列表", icon: <List className="h-3.5 w-3.5" /> },
+            { value: "grid", label: "卡片", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
           ]}
         />
       </header>
@@ -246,9 +278,9 @@ export function ExploreClient() {
                 setQuery(e.target.value);
                 setLoading(true);
               }}
-              placeholder="Search by keyword, tag, or source…"
+              placeholder="搜索关键词、标签或来源…"
               className="pl-9"
-              aria-label="Search intelligence"
+              aria-label="搜索情报"
             />
           </div>
           <Button
@@ -260,22 +292,24 @@ export function ExploreClient() {
             }}
           >
             <Star className={favoritesOnly ? "h-3.5 w-3.5 fill-current" : "h-3.5 w-3.5"} />
-            Favorites
+            收藏
           </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-muted-accent" />
+          <Select value={readingFilter} aria-label="阅读状态筛选" onChange={(event) => { setReadingFilter(event.target.value as "all" | "read" | "unread"); setLoading(true); }} className="w-full sm:w-40"><option value="all">全部阅读状态</option><option value="unread">只看未读</option><option value="read">只看已读</option></Select>
+          <Button size="sm" variant={groupMode ? "primary" : "outline"} aria-pressed={groupMode} onClick={() => setGroupMode((value) => !value)}>同事件聚合</Button>
           <Select
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as CategoryId | "all");
               setLoading(true);
             }}
-            aria-label="Filter by category"
+            aria-label="按分类筛选"
             className="w-full sm:w-56"
           >
-            <option value="all">All categories</option>
+            <option value="all">全部分类</option>
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
@@ -289,10 +323,10 @@ export function ExploreClient() {
               setTopic(e.target.value as TopicId | "all");
               setLoading(true);
             }}
-            aria-label="Filter by subject"
+            aria-label="按主题筛选"
             className="w-full sm:w-48"
           >
-            <option value="all">All subjects</option>
+            <option value="all">全部主题</option>
             {(Object.keys(TOPIC_NAMES) as TopicId[]).map((id) => (
               <option key={id} value={id}>
                 {TOPIC_NAMES[id]}
@@ -306,10 +340,10 @@ export function ExploreClient() {
               setSource(e.target.value);
               setLoading(true);
             }}
-            aria-label="Filter by source"
+            aria-label="按来源筛选"
             className="w-full sm:w-52"
           >
-            <option value="all">All sources</option>
+            <option value="all">全部来源</option>
             {sources.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -323,7 +357,7 @@ export function ExploreClient() {
               setExplicitSort(e.target.value as SortKey);
               setLoading(true);
             }}
-            aria-label="Sort by"
+            aria-label="排序方式"
             className="w-full sm:w-44"
           >
             {SORT_OPTIONS.map((o) => (
@@ -335,11 +369,12 @@ export function ExploreClient() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground"><span>当前已加载 {items.length} 条，已读 {items.filter((item) => readIds.includes(item.id)).length} 条{groupMode ? ` · 聚合为 ${eventGroups.length} 个事件（仅当前已加载内容）` : ""}</span><Button size="sm" variant="outline" disabled={!items.length || loading} onClick={() => markRead(items.map((item) => item.id))}>已加载结果全部标记已读</Button></div>
       {/* Results */}
       <div>
         <p className="mb-3 font-mono text-xs tabular-nums text-muted-foreground">
-          {favoritesOnly ? visibleItems.length : total} signal{total === 1 ? "" : "s"}
-          {hasActiveFilters ? " · filtered" : ""}
+          {total} 条情报
+          {hasActiveFilters ? " · 已筛选" : ""}
         </p>
 
         {error && (
@@ -355,7 +390,7 @@ export function ExploreClient() {
               }}
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              Retry
+              重试
             </Button>
           </div>
         )}
@@ -373,46 +408,42 @@ export function ExploreClient() {
         ) : !error && visibleItems.length === 0 ? (
           <EmptyState
             icon={<Search />}
-            title="No matching signals"
-            description="调整关键词或筛选条件后再试，或先在 Settings 中采集数据。"
+            title="没有匹配的情报"
+            description="调整关键词或筛选条件后再试，或先在设置中采集数据。"
             action={
               <Button size="sm" variant="outline" onClick={resetFilters}>
-                Clear filters
+                清除筛选
               </Button>
             }
           />
         ) : !error && view === "grid" ? (
           <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-            {visibleItems.map((item) => (
-              <ItemCard key={item.id} item={item} onOpen={setSelected} />
-            ))}
+            {eventGroups.map((group) => <div key={group[0].id} className="flex flex-col"><ItemCard item={group[0]} onOpen={setSelected} />{otherSources(group)}</div>)}
           </div>
         ) : !error ? (
           <div className="flex flex-col gap-2.5">
-            {visibleItems.map((item) => (
-              <ItemRow key={item.id} item={item} onOpen={setSelected} />
-            ))}
+            {eventGroups.map((group) => <div key={group[0].id}><ItemRow item={group[0]} onOpen={setSelected} />{otherSources(group)}</div>)}
           </div>
         ) : null}
 
-        {!error && !loading && hasMore && !favoritesOnly && (
+        {!error && !loading && hasMore && (
           <div className="mt-4 flex justify-center">
             <Button variant="outline" size="sm" disabled={loadingMore} onClick={loadMore}>
-              {loadingMore ? "Loading…" : `Load more (${total - records.length} remaining)`}
+              {loadingMore ? "加载中…" : `加载更多（剩余 ${total - records.length} 条）`}
             </Button>
           </div>
         )}
       </div>
 
       <Drawer
-        open={detailItem !== null}
+        open={detailItem !== null || openId !== null}
         onClose={() => {
           setSelected(null);
-          setOpenId(null);
+          setDismissedId(openId);
         }}
-        title="Intelligence detail"
+        title="情报详情"
       >
-        {detailItem ? <ItemDetail item={detailItem} /> : null}
+        {detailItem ? <ItemDetail key={detailItem.id} item={detailItem} /> : <p className="p-5" role="status">{detailError ?? "正在加载详情…"}</p>}
       </Drawer>
     </div>
   );

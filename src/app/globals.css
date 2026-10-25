@@ -8,41 +8,43 @@
    ============================================================ */
 
 :root {
-  /* Light theme — quiet, paper-like editorial */
-  --background: #f5f5f3;
-  --panel: rgb(255 255 255 / 0.88);
-  --panel-secondary: rgb(236 236 234 / 0.85);
-  --foreground: #161616;
-  --muted-foreground: #5f5f5f;
-  --border: #e0e0dd;
-  --border-strong: #c9c9c5;
-  --accent: #161616;
+  --background: #f5f6f8;
+  --panel: #ffffff;
+  --panel-secondary: #eef1f5;
+  --foreground: #202c3e;
+  --muted-foreground: #5f6d80;
+  --border: #e1e6ee;
+  --border-strong: #c6d0df;
+  --accent: #315fa5;
   --accent-foreground: #ffffff;
-  --accent-soft: rgba(0, 0, 0, 0.05);
-  --muted-accent: #737373;
-  --warning: #a76e24;
-  --warning-soft: #f7ecd8;
-  --danger: #b33a3a;
-  --overlay: rgba(0, 0, 0, 0.55);
+  --accent-soft: #eaf0fa;
+  --muted-accent: #687b96;
+  --warning: #8e631d;
+  --warning-soft: #fcf3e2;
+  --danger: #b43d4b;
+  --overlay: rgb(15 25 43 / 0.45);
+  --surface-shadow: 0 3px 18px rgb(30 48 77 / 0.035);
+  --hover-shadow: 0 8px 24px rgb(30 48 77 / 0.07);
 }
 
 .dark {
-  /* Dark theme — research terminal */
-  --background: #111111;
-  --panel: rgb(23 23 23 / 0.88);
-  --panel-secondary: rgb(30 30 30 / 0.85);
-  --foreground: #eaeaea;
-  --muted-foreground: #a3a3a3;
-  --border: #333333;
-  --border-strong: #454545;
-  --accent: #f4f4f4;
-  --accent-foreground: #101010;
-  --accent-soft: rgba(255, 255, 255, 0.12);
-  --muted-accent: #8f8f8f;
-  --warning: #e7b66d;
-  --warning-soft: rgba(231, 182, 109, 0.1);
-  --danger: #e27777;
-  --overlay: rgba(0, 0, 0, 0.6);
+  --background: #111923;
+  --panel: #182330;
+  --panel-secondary: #1e2c3c;
+  --foreground: #e6edf6;
+  --muted-foreground: #a6b4c7;
+  --border: #2b3b4e;
+  --border-strong: #415670;
+  --accent: #96b9ef;
+  --accent-foreground: #11233e;
+  --accent-soft: #223751;
+  --muted-accent: #9aadc6;
+  --warning: #e9bf79;
+  --warning-soft: #352d23;
+  --danger: #f098a2;
+  --overlay: rgb(5 10 18 / 0.72);
+  --surface-shadow: 0 4px 20px rgb(0 0 0 / 0.09);
+  --hover-shadow: 0 10px 28px rgb(0 0 0 / 0.18);
 }
 
 @theme inline {
@@ -78,6 +80,8 @@ html {
 }
 
 body {
+  isolation: isolate;
+  line-height: 1.65;
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
@@ -145,4 +149,60 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+
+.editorial-card { box-shadow: var(--surface-shadow); }
+.page-header {
+  position: relative;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--border-strong);
+}
+.page-header::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  width: 44px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.page-header h1 {
+  font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  line-height: 1.3;
+  letter-spacing: -.04em;
+  font-weight: 700;
+}
+.editorial-sidebar { background: color-mix(in srgb, var(--panel) 94%, transparent); }
+.editorial-topbar { background: color-mix(in srgb, var(--background) 88%, transparent); }
+.editorial-row, .editorial-item-card {
+  box-shadow: var(--surface-shadow);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.editorial-row:hover, .editorial-item-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--hover-shadow);
+}
+.editorial-highlight {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--border-strong);
+  background: linear-gradient(130deg, var(--panel) 35%, var(--accent-soft) 160%);
+}
+.editorial-highlight::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), transparent 85%);
+}
+.editorial-stat { border-left: 1px solid var(--border); }
+.editorial-stat:first-child { border-left: 0; }
+.editorial-main { overflow-wrap: anywhere; }
+.editorial-main h2, .editorial-main h3 { text-wrap: pretty; }
+@media (max-width: 639px) {
+  .editorial-stat:nth-child(3) { border-left: 0; }
+  .editorial-stat:nth-child(n + 3) { border-top: 1px solid var(--border); }
+  .page-header { padding-bottom: 1.25rem; }
 }

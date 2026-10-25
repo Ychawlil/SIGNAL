@@ -1,6 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { ArticleContext } from "./article-context";
+import { downloadMarkdown, exportMarkdown } from "@/lib/markdown-export";
 import { Bookmark, CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import { useLibrary } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -30,9 +32,10 @@ interface ItemDetailProps {
 }
 
 export function ItemDetail({ item }: ItemDetailProps) {
-  const { isFavorite, toggleFavorite, isRead, toggleRead, getNote, setNote } =
+  const { isFavorite, toggleFavorite, isRead, toggleRead, getNote, setNote, addToQueue } =
     useLibrary();
 
+  const [notice, setNotice] = useState("");
   const favorite = isFavorite(item.id);
   const read = isRead(item.id);
   const note = getNote(item.id);
@@ -48,11 +51,11 @@ export function ItemDetail({ item }: ItemDetailProps) {
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {item.sourceName} · {formatDateTime(item.publishedAt)}（
-          <TimeAgo iso={item.publishedAt} />）· {item.readingTimeMinutes} min read
+          <TimeAgo iso={item.publishedAt} />）· {item.readingTimeMinutes} 分钟阅读
         </p>
 
         <div className="mt-4 flex items-center gap-4">
-          <ImportanceMeter score={item.importanceScore} />
+          <ImportanceMeter articleId={item.id} score={item.importanceScore} />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -62,7 +65,7 @@ export function ItemDetail({ item }: ItemDetailProps) {
             onClick={() => toggleFavorite(item.id)}
           >
             <Bookmark className={favorite ? "h-3.5 w-3.5 fill-current" : "h-3.5 w-3.5"} />
-            {favorite ? "Favorited" : "Favorite"}
+            {favorite ? "已收藏" : "收藏"}
           </Button>
           <Button
             size="sm"
@@ -74,8 +77,10 @@ export function ItemDetail({ item }: ItemDetailProps) {
             ) : (
               <Circle className="h-3.5 w-3.5" />
             )}
-            {read ? "Marked read" : "Mark as read"}
+            {read ? "已读" : "标记已读"}
           </Button>
+          <Button size="sm" onClick={() => { void addToQueue(item.id).then(() => setNotice("已加入稍后阅读")).catch(() => setNotice("加入失败，请重试")); }}>稍后阅读</Button>
+          <Button size="sm" variant="outline" onClick={() => downloadMarkdown(exportMarkdown([{ title: item.title, url: item.sourceUrl, summary: item.summary, keyChange: item.keyChange, sourceName: item.sourceName, publishedAt: item.publishedAt, notes: note }]), `signal-${item.id}.md`)}>导出 Markdown</Button>
           <a
             href={item.sourceUrl}
             target="_blank"
@@ -83,20 +88,21 @@ export function ItemDetail({ item }: ItemDetailProps) {
             className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Open source
+            查看原文
           </a>
         </div>
       </div>
 
-      <Section label="Summary">{item.summary}</Section>
-      <Section label="Key change">{item.keyChange}</Section>
-      <Section label="Why it matters">{item.whyItMatters}</Section>
-      <Section label="Limitations">{item.limitations}</Section>
-      <Section label="Personal relevance">{item.personalRelevance}</Section>
+      {notice && <p role="status" className="px-5 pb-3 text-xs text-accent">{notice}</p>}
+      <Section label="摘要">{item.summary}</Section>
+      <Section label="关键变化">{item.keyChange}</Section>
+      <Section label="为何重要">{item.whyItMatters}</Section>
+      <Section label="局限性">{item.limitations}</Section>
+      <Section label="与我的关联">{item.personalRelevance}</Section>
 
       <div className="border-t border-border px-5 py-4">
         <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-          Topics
+          主题
         </p>
         <div className="flex flex-wrap gap-1.5">
           {item.topics.map((t) => (
@@ -114,9 +120,10 @@ export function ItemDetail({ item }: ItemDetailProps) {
         </div>
       </div>
 
+      <ArticleContext key={item.id} id={item.id} />
       <div className="border-t border-border px-5 py-4">
         <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-          Personal note
+          个人笔记
         </p>
         <textarea
           value={note}

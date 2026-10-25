@@ -32,7 +32,7 @@ function fetchGithubAuth(force = false): Promise<GithubAuthInfo> {
   return fetch(`/api/intelligence/github-auth${force ? "?force=1" : ""}`, {
     cache: "no-store",
   }).then((response) => {
-    if (!response.ok) throw new Error(`GitHub auth probe failed (${response.status})`);
+    if (!response.ok) throw new Error(`GitHub 认证检查失败 (${response.status})`);
     return response.json() as Promise<GithubAuthInfo>;
   });
 }
@@ -40,7 +40,7 @@ function fetchGithubAuth(force = false): Promise<GithubAuthInfo> {
 function fetchOverview(): Promise<Overview> {
   return fetch("/api/intelligence/status", { cache: "no-store" }).then((response) => {
     if (!response.ok) {
-      throw new Error(`Status request failed (${response.status})`);
+      throw new Error(`状态请求失败 (${response.status})`);
     }
     return response.json() as Promise<Overview>;
   });
@@ -55,15 +55,15 @@ const HEALTH_STYLE: Record<ProviderStatus["health"], string> = {
 };
 
 const HEALTH_LABEL: Record<ProviderStatus["health"], string> = {
-  ok: "OK",
-  degraded: "Degraded",
-  error: "Error",
-  disabled: "Disabled",
-  unconfigured: "Not configured",
+  ok: "正常",
+  degraded: "部分异常",
+  error: "失败",
+  disabled: "已停用",
+  unconfigured: "未配置",
 };
 
 function formatTime(iso: string | null): string {
-  if (!iso) return "never";
+  if (!iso) return "暂无记录";
   try {
     return new Date(iso).toLocaleString();
   } catch {
@@ -152,7 +152,7 @@ export function SourcePanel() {
             ) : (
               <CloudDownload className="h-3.5 w-3.5" />
             )}
-            {syncing ? "Syncing…" : "Sync now"}
+            {syncing ? "正在同步…" : "立即同步"}
           </Button>
         </div>
 
@@ -171,7 +171,7 @@ export function SourcePanel() {
               {lastSync.runs.length} enabled source(s).
             </p>
             <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px]">
-              {lastSync.runs.map((run) => (
+              {lastSync.runs.filter((run) => run.provider !== "arxiv" || run.status !== "disabled").map((run) => (
                 <li key={run.provider}>
                   <span
                     className={cn(
@@ -197,7 +197,7 @@ export function SourcePanel() {
           <>
             <div className="mt-4 flex items-center gap-2 text-sm text-foreground">
               <Database className="h-4 w-4 text-muted-accent" />
-              {overview.articles.total} articles stored
+              {overview.articles.total} 篇 stored
             </div>
 
             {githubAuth && (
@@ -234,24 +234,24 @@ export function SourcePanel() {
                     <RefreshCw
                       className={cn("h-3.5 w-3.5", probingAuth && "animate-spin")}
                     />
-                    Re-check
+                    重新检查
                   </Button>
                 </div>
                 <p className="mt-1 font-mono text-[11px] leading-5 text-muted-foreground">
                   {githubAuth.tokenConfigured
-                    ? `token: ${githubAuth.tokenFormat} · ${githubAuth.tokenLength} chars（值不在前端展示）`
+                    ? `令牌类型：${githubAuth.tokenFormat} · ${githubAuth.tokenLength} 个字符（值不在前端展示）`
                     : "服务端未读取到 GITHUB_TOKEN"}
                 </p>
                 <p className="font-mono text-[11px] leading-5 text-muted-foreground">
                   {githubAuth.limit !== null
-                    ? `core 剩余 ${githubAuth.remaining ?? "?"}/${githubAuth.limit} · 重置 ${
+                    ? `基础接口剩余 ${githubAuth.remaining ?? "?"}/${githubAuth.limit} · 重置 ${
                         githubAuth.resetAt
                           ? new Date(githubAuth.resetAt).toLocaleString()
-                          : "unknown"
+                          : "未知"
                       }`
-                    : "未取得 core 配额"}
+                    : "未取得基础接口配额"}
                   {githubAuth.searchLimit !== null
-                    ? ` · search 剩余 ${githubAuth.searchRemaining ?? "?"}/${githubAuth.searchLimit}`
+                    ? ` · 搜索接口剩余 ${githubAuth.searchRemaining ?? "?"}/${githubAuth.searchLimit}`
                     : ""}
                 </p>
                 {githubAuth.error && (
@@ -263,7 +263,7 @@ export function SourcePanel() {
             )}
 
             <ul className="mt-3 flex flex-col gap-2">
-              {overview.providers.map((provider) => (
+              {overview.providers.filter((provider) => provider.id !== "arxiv" || provider.enabled).map((provider) => (
                 <li
                   key={provider.id}
                   className="rounded-md border border-border bg-panel-secondary p-3"
@@ -292,17 +292,17 @@ export function SourcePanel() {
                     </div>
                     <div className="shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
                       <p>
-                        last success:{" "}
+                        最近成功：{" "}
                         <span className="text-foreground">
                           {formatTime(provider.lastSuccessAt)}
                         </span>
                       </p>
                       <p>
-                        last run: {provider.lastItemsNew ?? 0} new /{" "}
-                        {provider.lastItemsSeen ?? 0} seen
+                        上次采集： {provider.lastItemsNew ?? 0} 条新增 /{" "}
+                        {provider.lastItemsSeen ?? 0} 条检索
                       </p>
                       <p>
-                        stored:{" "}
+                        已入库：{" "}
                         <span className="text-foreground">{provider.storedArticles}</span> articles
                       </p>
                     </div>
@@ -314,7 +314,7 @@ export function SourcePanel() {
             {overview.recentErrors.length > 0 && (
               <div className="mt-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                  Recent errors
+                  最近错误
                 </p>
                 <ul className="mt-2 flex flex-col gap-1">
                   {overview.recentErrors.map((err) => (
@@ -334,7 +334,7 @@ export function SourcePanel() {
           !error && (
             <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="h-4 w-4 animate-spin" />
-              Loading source status…
+              正在加载来源状态…
             </div>
           )
         )}

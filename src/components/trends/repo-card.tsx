@@ -85,15 +85,15 @@ export function RepoCard({ repo }: { repo: RisingRepo }) {
       </div>
 
       <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
-        <MetricBar label="Popularity" value={repo.metrics.popularity} />
+        <MetricBar label="热度" value={repo.metrics.popularity} />
         <MetricBar
-          label="Momentum"
+          label="增长势头"
           value={repo.metrics.momentum}
           hint={repo.momentumDetail.note}
         />
-        <MetricBar label="Tech merit" value={repo.metrics.technicalMerit} />
-        <MetricBar label="Evidence" value={repo.metrics.evidenceQuality} />
-        <MetricBar label="Relevance" value={repo.metrics.relevance} />
+        <MetricBar label="技术价值" value={repo.metrics.technicalMerit} />
+        <MetricBar label="证据" value={repo.metrics.evidenceQuality} />
+        <MetricBar label="相关性" value={repo.metrics.relevance} />
       </div>
 
       <div className="mt-3 rounded-md border border-border bg-panel-secondary px-3 py-2 text-xs leading-5 text-muted-foreground">

@@ -1,4 +1,5 @@
 "use client";
+import { ArticleActions } from "@/components/items/article-actions";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -24,9 +25,9 @@ import { cn } from "@/lib/utils";
 type KindFilter = "paper" | "report" | "open-source" | "all";
 
 const KIND_META: Record<Exclude<KindFilter, "all">, { label: string; icon: ReactNode }> = {
-  paper: { label: "Paper", icon: <FileText className="h-3.5 w-3.5" /> },
-  report: { label: "Report", icon: <BookOpen className="h-3.5 w-3.5" /> },
-  "open-source": { label: "Open Source", icon: <GitBranch className="h-3.5 w-3.5" /> },
+  paper: { label: "论文", icon: <FileText className="h-3.5 w-3.5" /> },
+  report: { label: "报告", icon: <BookOpen className="h-3.5 w-3.5" /> },
+  "open-source": { label: "开源项目", icon: <GitBranch className="h-3.5 w-3.5" /> },
 };
 
 function kindOf(item: AnalyzedArticleRow): Exclude<KindFilter, "all"> {
@@ -83,22 +84,23 @@ function ResearchCard({ item }: { item: AnalyzedArticleRow }) {
           )}
         />
       </button>
+      <ArticleActions id={item.id} score={item.analysis.importanceScore} />
 
       {open && (
         <div className="fade-in border-t border-border px-4 pb-5 pt-4">
           <div className="grid gap-4">
-            <Field label="One-line summary">{analysis.oneLineSummary || item.summary || "—"}</Field>
-            <Field label="Key change">{analysis.keyChange || "—"}</Field>
-            <Field label="Differences vs prior work">{analysis.differences || "—"}</Field>
-            <Field label="Experiments & evidence">{analysis.evidence || "—"}</Field>
-            <Field label="Limitations & open problems">{analysis.limitations || "—"}</Field>
-            <Field label="Potential impact">{analysis.impact || "—"}</Field>
-            <Field label="Personal relevance">{analysis.personalRelevance || "—"}</Field>
+            <Field label="一句话摘要">{analysis.oneLineSummary || item.summary || "—"}</Field>
+            <Field label="关键变化">{analysis.keyChange || "—"}</Field>
+            <Field label="与已有工作的差异">{analysis.differences || "—"}</Field>
+            <Field label="实验与证据">{analysis.evidence || "—"}</Field>
+            <Field label="局限与待解决问题">{analysis.limitations || "—"}</Field>
+            <Field label="潜在影响">{analysis.impact || "—"}</Field>
+            <Field label="与我的关联">{analysis.personalRelevance || "—"}</Field>
 
             {analysis.furtherReading.length > 0 && (
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                  Recommended reading
+                  推荐阅读
                 </p>
                 <ol className="mt-1.5 flex flex-col gap-1">
                   {analysis.furtherReading.map((ref, i) => (
@@ -138,7 +140,7 @@ function ResearchCard({ item }: { item: AnalyzedArticleRow }) {
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent"
               >
                 <ExternalLink className="h-3 w-3" />
-                Source
+                来源
               </a>
             </div>
           </div>
@@ -156,9 +158,9 @@ export default function ResearchPage() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/analysis?pageSize=100", { cache: "no-store" })
+    fetch("/api/research?pageSize=100", { cache: "no-store" })
       .then((r) => {
-        if (!r.ok) throw new Error(`Analysis request failed (${r.status})`);
+        if (!r.ok) throw new Error(`Research request failed (${r.status})`);
         return r.json();
       })
       .then((data: { items: AnalyzedArticleRow[] }) => {
@@ -187,12 +189,12 @@ export default function ResearchPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="border-b border-border pb-6">
+      <header className="page-header border-b border-border pb-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
-          Deep dives
+          深度研究
         </p>
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
-          Research
+          研究
         </h1>
       </header>
 
@@ -201,19 +203,19 @@ export default function ResearchPage() {
           value={kind}
           onChange={setKind}
           options={[
-            { value: "all", label: "All" },
-            { value: "paper", label: "Papers" },
-            { value: "report", label: "Reports" },
-            { value: "open-source", label: "Open Source" },
+            { value: "all", label: "全部" },
+            { value: "paper", label: "论文" },
+            { value: "report", label: "报告" },
+            { value: "open-source", label: "开源项目" },
           ]}
         />
         <Select
           value={category}
           onChange={(e) => setCategory(e.target.value as CategoryId | "all")}
-          aria-label="Filter research by category"
+          aria-label="按研究分类筛选"
           className="w-full sm:w-56"
         >
-          <option value="all">All categories</option>
+          <option value="all">全部分类</option>
           {CATEGORIES.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
@@ -227,7 +229,7 @@ export default function ResearchPage() {
           <p className="text-sm text-danger">加载失败：{error}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Retry
+            重试
           </Button>
         </div>
       )}
@@ -235,13 +237,13 @@ export default function ResearchPage() {
       {!error && items === null ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <RefreshCw className="h-4 w-4 animate-spin" />
-          Loading research materials…
+          正在加载研究资料…
         </div>
       ) : !error && results.length === 0 ? (
         <EmptyState
           icon={<FlaskConical />}
-          title="No research entries"
-          description="先到 Analysis 页面运行分析，或调整筛选条件后再试。"
+          title="暂无研究资料"
+          description="先到分析页面运行分析，或调整筛选条件后再试。"
         />
       ) : (
         <div className="flex flex-col gap-2.5">

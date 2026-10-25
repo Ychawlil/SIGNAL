@@ -4,7 +4,6 @@ import { AppProviders } from "@/components/providers";
 import { SearchProvider } from "@/components/search/search-dialog";
 import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
-import { RandomBackground } from '@/components/random-background'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,16 +16,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SIGNAL — AI & Frontier Technology Intelligence Hub",
+  title: "SIGNAL — AI 与前沿科技情报工作台",
   description:
-    "Personal intelligence workbench for tracking AI, embodied intelligence, mathematics, computer science, open source and the broader scientific frontier.",
+    "追踪人工智能、具身智能、数学、计算机科学、开源与前沿科学的个人情报工作台。",
 };
 
 const themeInitScript = `
 (function () {
   try {
-    var stored = localStorage.getItem("signal.theme");
-    var dark = stored !== "light";
+    var dark = true;
     document.documentElement.classList.toggle("dark", dark);
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
   } catch (e) {
@@ -38,7 +36,7 @@ const themeInitScript = `
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="zh-CN"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
@@ -47,7 +45,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full">
         <AppProviders>
-          <RandomBackground />
           <SearchProvider>
             <AppShell>{children}</AppShell>
           </SearchProvider>

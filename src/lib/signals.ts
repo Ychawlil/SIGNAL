@@ -19,6 +19,8 @@ export interface SignalRecord {
   authors: string[];
   tags: string[];
   importanceScore: number;
+  importanceFactors?: import("./server/analysis/types").AnalysisFactors | null;
+  evidenceBasis?: string;
   keyChange: string;
   differences: string;
   evidence: string;
@@ -50,6 +52,8 @@ export function toIntelligenceItem(record: SignalRecord): IntelligenceItem {
     sourceUrl: record.url,
     publishedAt: record.publishedAt,
     importanceScore: record.importanceScore,
+    importanceFactors: record.importanceFactors,
+    evidenceBasis: record.evidenceBasis,
     keyChange: record.keyChange || record.differences || "—",
     whyItMatters: record.impact || "—",
     limitations: record.limitations || "—",

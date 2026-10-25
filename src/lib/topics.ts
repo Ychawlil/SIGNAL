@@ -7,8 +7,8 @@ import type { CategoryId, Topic, TopicId } from "./types";
 export const TOPICS: Topic[] = [
   {
     id: "llm-reasoning",
-    name: "LLM Reasoning",
-    shortName: "Reasoning",
+    name: "大模型推理",
+    shortName: "推理",
     description:
       "推理能力的来源：测试时计算、搜索、验证器与可解释的思维链。",
     recentSignalCount: 0,
@@ -18,8 +18,8 @@ export const TOPICS: Topic[] = [
   },
   {
     id: "ai-coding",
-    name: "AI Coding",
-    shortName: "Coding",
+    name: "AI 编程",
+    shortName: "编程",
     description: "从代码补全到自主修复：编码智能体与软件工程工作流的重构。",
     recentSignalCount: 0,
     keyDevelopments: [],
@@ -28,8 +28,8 @@ export const TOPICS: Topic[] = [
   },
   {
     id: "ai-agents",
-    name: "AI Agents",
-    shortName: "Agents",
+    name: "AI 智能体",
+    shortName: "智能体",
     description: "自主智能体的规划、记忆、工具使用与多智能体协作。",
     recentSignalCount: 0,
     keyDevelopments: [],
@@ -38,8 +38,8 @@ export const TOPICS: Topic[] = [
   },
   {
     id: "physical-ai",
-    name: "Physical AI & Robotics",
-    shortName: "Physical AI",
+    name: "具身智能与机器人",
+    shortName: "具身智能",
     description:
       "具身智能统一方向：VLA、机器人学习与世界模型，不再拆成多个独立主题。",
     recentSignalCount: 0,
@@ -49,8 +49,8 @@ export const TOPICS: Topic[] = [
   },
   {
     id: "ai-math",
-    name: "AI for Mathematics",
-    shortName: "AI × Math",
+    name: "AI 数学",
+    shortName: "AI 数学",
     description: "定理证明、形式化验证与数学发现的自动化。",
     recentSignalCount: 0,
     keyDevelopments: [],
@@ -59,8 +59,8 @@ export const TOPICS: Topic[] = [
   },
   {
     id: "ai-systems",
-    name: "AI for Systems",
-    shortName: "AI × Systems",
+    name: "AI 系统",
+    shortName: "AI 系统",
     description: "推理系统、训练框架、调度与基础设施的效率革命。",
     recentSignalCount: 0,
     keyDevelopments: [],

@@ -9,16 +9,16 @@ const KIND_META: Record<
   WorthFollowingItem["kind"],
   { label: string; icon: ReactNode }
 > = {
-  model: { label: "Model", icon: <Box className="h-3.5 w-3.5" /> },
-  paper: { label: "Paper", icon: <BookOpen className="h-3.5 w-3.5" /> },
-  repo: { label: "Repo", icon: <GitBranch className="h-3.5 w-3.5" /> },
-  team: { label: "Team", icon: <Users className="h-3.5 w-3.5" /> },
+  model: { label: "模型", icon: <Box className="h-3.5 w-3.5" /> },
+  paper: { label: "论文", icon: <BookOpen className="h-3.5 w-3.5" /> },
+  repo: { label: "代码仓库", icon: <GitBranch className="h-3.5 w-3.5" /> },
+  team: { label: "团队", icon: <Users className="h-3.5 w-3.5" /> },
 };
 
 export function WorthFollowing({ items }: { items: WorthFollowingItem[] }) {
   return (
     <section>
-      <SectionHeading index="E" label="Watchlist" title="Worth Following" />
+      <SectionHeading index="E" label="关注清单" title="值得关注" />
       {items.length === 0 ? (
         <p className="rounded-lg border border-border bg-panel p-5 text-sm text-muted-foreground">
           —

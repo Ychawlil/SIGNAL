@@ -1,3 +1,4 @@
+import { getPlanet } from "@/lib/universe/planets";
 import { NextRequest, NextResponse } from "next/server";
 import { listSignals } from "@/lib/server/signals";
 import type { ProviderId } from "@/lib/server/types";
@@ -37,6 +38,7 @@ const LEGACY_TOPICS: Record<string, TopicId> = {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
+  for (const key of ["ids", "excludeIds"]) { if ((params.get(key) ?? "").split(",").length > 10000) return NextResponse.json({ error: "筛选条目过多，请缩小范围" }, { status: 400 }); }
   const page = Math.max(1, Number(params.get("page") ?? "1") || 1);
   const pageSize = Math.min(100, Math.max(1, Number(params.get("pageSize") ?? "20") || 20));
   const q = params.get("q") ?? undefined;
@@ -66,9 +68,12 @@ export async function GET(request: NextRequest) {
     : "newest";
 
   const { items, total } = listSignals({
+    excludeIds: (params.get("excludeIds") ?? "").split(",").map(Number).filter((id) => Number.isSafeInteger(id) && id > 0).slice(0, 10000),
+    ids: params.has("ids") ? (params.get("ids") ?? "").split(",").map(Number).filter((id) => Number.isSafeInteger(id) && id > 0).slice(0, 10000) : undefined,
     page,
     pageSize,
     q,
+    categories: getPlanet(params.get("planet"))?.categories,
     category,
     topic,
     source,

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Database, Moon, Save, ShieldCheck, Sun } from "lucide-react";
-import { useSettings, useTheme } from "@/components/providers";
+import { Database, Moon, Save, ShieldCheck } from "lucide-react";
+import { useSettings } from "@/components/providers";
+import { BackupPanel } from "@/components/settings/backup-panel";
 import { SourcePanel } from "@/components/settings/source-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SORT_OPTIONS } from "@/lib/constants";
 import type { SortKey, TopicId } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 function SettingSection({
   title,
@@ -39,7 +39,6 @@ function SettingSection({
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useSettings();
 
   // Weights live on the server because they drive importance scoring.
@@ -95,7 +94,7 @@ export default function SettingsPage() {
         setWeights(next);
         setDraftWeights(next);
         setRescored(body.rescored ?? 0);
-        setNotice("??????????????????");
+        setNotice("权重已保存，分析评分已更新。");
       })
       .catch((err: unknown) => {
         setWeightError(err instanceof Error ? err.message : String(err));
@@ -105,50 +104,25 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="border-b border-border pb-6">
+      <header className="page-header border-b border-border pb-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
-          Preferences
+          偏好设置
         </p>
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
-          Settings
+          设置
         </h1>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SettingSection title="Theme">
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { value: "dark", label: "Dark", icon: <Moon className="h-4 w-4" />, hint: "Research terminal" },
-                { value: "light", label: "Light", icon: <Sun className="h-4 w-4" />, hint: "Editorial paper" },
-              ] as const
-            ).map((option) => {
-              const active = theme === option.value;
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex flex-col items-start gap-2 rounded-md border p-3 text-left transition-colors",
-                    active
-                      ? "border-accent bg-accent-soft"
-                      : "border-border bg-panel-secondary hover:border-border-strong",
-                  )}
-                >
-                  <span className={cn("flex items-center gap-2 text-sm font-medium", active ? "text-accent" : "text-foreground")}>
-                    {option.icon}
-                    {option.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{option.hint}</span>
-                </button>
-              );
-            })}
+        <SettingSection title="主题外观" description="统一使用深色界面。">
+          <div className="flex items-center gap-3 rounded-md border border-accent bg-accent-soft p-3">
+            <Moon className="h-4 w-4 text-accent" />
+            <div><p className="text-sm font-medium text-foreground">深色 · 研究终端</p><p className="mt-1 text-xs text-muted-foreground">与星球场景保持一致。</p></div>
           </div>
         </SettingSection>
 
         <SettingSection
-          title="Daily signal count"
+          title="每日简报条数"
           description="每日简报条数。"
         >
           <div className="flex items-center gap-3">
@@ -165,15 +139,15 @@ export default function SettingsPage() {
                 }
               }}
               className="w-28"
-              aria-label="Daily signal count"
+              aria-label="每日简报条数"
             />
-            <span className="text-sm text-muted-foreground">signals per briefing</span>
+            <span className="text-sm text-muted-foreground">条 / 每日简报</span>
           </div>
         </SettingSection>
       </div>
 
       <SettingSection
-        title="Focus areas & weights"
+        title="关注领域与权重"
         description="权重换算为 0–30 的相关性因子，保存后立即重算全部分析。"
       >
         {draftWeights === null ? (
@@ -202,7 +176,7 @@ export default function SettingsPage() {
                         )
                       }
                       className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-panel-secondary accent-accent"
-                      aria-label={`${area.label} weight`}
+                      aria-label={`${area.label} 权重`}
                     />
                     <span className="w-16 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
                       {value}
@@ -241,14 +215,14 @@ export default function SettingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SettingSection
-          title="Default sorting"
-          description="Explore 默认排序。"
+          title="默认排序"
+          description="探索页默认排序。"
         >
           <Select
             value={settings.defaultSort}
             onChange={(e) => updateSettings({ defaultSort: e.target.value as SortKey })}
             className="w-full sm:w-56"
-            aria-label="Default sorting"
+            aria-label="默认排序"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -258,7 +232,7 @@ export default function SettingsPage() {
           </Select>
         </SettingSection>
 
-        <SettingSection title="Data status">
+        <SettingSection title="数据状态">
           <div className="flex flex-col gap-2 rounded-md border border-border bg-panel-secondary p-4">
             <div className="flex items-center gap-2 text-sm text-foreground">
               <Database className="h-4 w-4 text-muted-accent" />
@@ -273,19 +247,20 @@ export default function SettingsPage() {
         </SettingSection>
       </div>
 
+      <SettingSection title="个人数据备份"><BackupPanel /></SettingSection>
       <SourcePanel />
 
-      <SettingSection title="Data sources & privacy">
+      <SettingSection title="数据来源与隐私">
         <div className="flex flex-col gap-3 text-sm leading-6 text-muted-foreground">
           <div className="flex gap-2.5">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-accent" />
             <p>
-              情报采集仅在你手动触发「Sync now」或调用同步接口时进行，向 arXiv / GitHub
+              情报采集由手动更新、同步接口或已启用的定时任务触发，向 arXiv / GitHub
               等公开来源发起只读请求，并把规范化结果保存在本机 SQLite 数据库（.data/signal.db）中。
             </p>
           </div>
           <p>
-            收藏、笔记、已读状态、主题与设置仍保存在浏览器 localStorage 中；所有 API 密钥只读取自服务端环境变量，不会进入前端代码或浏览器。
+            所有页面的收藏统一保存在本机数据库；详情页笔记、已读状态、主题与偏好保存在当前浏览器，研究合集与研究库笔记保存在本机数据库中；所有 API 密钥只读取自服务端环境变量，不会进入前端代码或浏览器。
           </p>
         </div>
       </SettingSection>

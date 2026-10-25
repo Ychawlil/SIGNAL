@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ImportanceMeter } from "@/components/items/meta";
+import { downloadMarkdown, exportMarkdown } from "@/lib/markdown-export";
+import { useLibrary } from "@/components/providers";
+import { CATEGORY_MAP } from "@/lib/constants";
 import { ChevronDown, History, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,14 +76,14 @@ function SavedItemCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <Badge variant="outline" className="font-mono uppercase tracking-wide">
-              {item.article.category}
+              {CATEGORY_MAP[item.article.category]?.label ?? item.article.category}
             </Badge>
             <span className="text-muted-foreground">
               {item.article.sourceName} · {item.article.publishedAt.slice(0, 10)}
             </span>
             {item.importanceScore !== null && (
               <span className="font-mono tabular-nums text-muted-foreground">
-                imp {item.importanceScore}
+                <ImportanceMeter articleId={String(item.article.id)} score={item.importanceScore} />
               </span>
             )}
           </div>
@@ -95,8 +99,8 @@ function SavedItemCard({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Remove from library"
-          title="Remove from library"
+          aria-label="取消研究库收藏"
+          title="取消研究库收藏"
           onClick={() => libraryApi.unsave(item.article.id).then(onMutate).catch(() => {})}
           className="text-muted-foreground hover:text-danger"
         >
@@ -111,24 +115,24 @@ function SavedItemCard({
             const value = e.target.value;
             patch({ status: value === "saved" ? null : (value as SaveStatus) });
           }}
-          aria-label="Reading status"
+          aria-label="阅读状态"
           className="w-44"
         >
-          <option value="saved">Saved</option>
-          <option value="later">Read later</option>
-          <option value="read">Read</option>
-          <option value="reproduce">Worth reproducing</option>
+          <option value="saved">已收藏</option>
+          <option value="later">稍后阅读</option>
+          <option value="read">已读</option>
+          <option value="reproduce">值得复现</option>
         </Select>
 
         <Button variant="outline" size="sm" onClick={openHistory}>
           <History className="h-3.5 w-3.5" />
-          History
+          相关记录
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", historyOpen && "rotate-180")} />
         </Button>
 
         <div className="flex items-center gap-1.5">
-          <Select value={collectionId} onChange={(e) => setCollectionId(e.target.value)} aria-label="Add to collection" className="w-40">
-            <option value="">Add to collection…</option>
+          <Select value={collectionId} onChange={(e) => setCollectionId(e.target.value)} aria-label="加入合集" className="w-40">
+            <option value="">加入合集…</option>
             {collections.map((c) => (
               <option key={c.id} value={String(c.id)}>
                 {c.title}
@@ -136,7 +140,7 @@ function SavedItemCard({
             ))}
           </Select>
           <Button variant="secondary" size="sm" onClick={addToCollection} disabled={!collectionId}>
-            Add
+            添加
           </Button>
         </div>
       </div>
@@ -162,7 +166,7 @@ function SavedItemCard({
                             {rel.title}
                           </a>
                           <span className="font-mono tabular-nums text-muted-foreground">{rel.publishedAt.slice(0, 10)}</span>
-                          {rel.saved && <Badge variant="accent">saved</Badge>}
+                          {rel.saved && <Badge variant="accent">已收藏</Badge>}
                         </li>
                       ))}
                     </ul>
@@ -177,7 +181,7 @@ function SavedItemCard({
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <div>
           <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            Note
+            笔记
           </p>
           <textarea
             value={notes}
@@ -191,14 +195,14 @@ function SavedItemCard({
         </div>
         <div>
           <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-            Tags
+            标签
           </p>
           <div className="flex flex-wrap gap-1.5">
             {item.tags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => removeTag(tag)}
-                title="Remove tag"
+                title="移除标签"
                 className="group inline-flex items-center gap-1 rounded-sm border border-border bg-panel-secondary px-1.5 py-0.5 text-xs text-foreground transition-colors hover:border-danger/50 hover:text-danger"
               >
                 #{tag}
@@ -220,7 +224,7 @@ function SavedItemCard({
               className="h-8 text-sm"
             />
             <Button variant="secondary" size="sm" onClick={addTag}>
-              Add
+              添加
             </Button>
           </div>
         </div>
@@ -230,13 +234,17 @@ function SavedItemCard({
 }
 
 export function SavedTab({
+  initialStatus,
   refreshToken,
   onMutate,
 }: {
+  initialStatus?: StatusFilter;
   refreshToken: number;
   onMutate: () => void;
 }) {
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const { favoriteIds } = useLibrary();
+  const [status, setStatus] = useState<StatusFilter>(initialStatus ?? "all");
   const [q, setQ] = useState("");
   const [items, setItems] = useState<SavedItemView[] | null>(null);
   const [collections, setCollections] = useState<ResearchCollection[]>([]);
@@ -258,7 +266,7 @@ export function SavedTab({
     return () => {
       active = false;
     };
-  }, [status, q, refreshToken]);
+  }, [status, q, refreshToken, favoriteIds]);
 
   useEffect(() => {
     let active = true;
@@ -276,25 +284,26 @@ export function SavedTab({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Segmented<StatusFilter>
+        {!initialStatus && <Segmented<StatusFilter>
           value={status}
           onChange={setStatus}
           options={[
-            { value: "all", label: "All" },
-            { value: "later", label: "Read later" },
-            { value: "read", label: "Read" },
-            { value: "reproduce", label: "Reproduce" },
+            { value: "all", label: "全部" },
+            { value: "later", label: "稍后阅读" },
+            { value: "read", label: "已读" },
+            { value: "reproduce", label: "待复现" },
           ]}
-        />
+        />}
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="搜索标题、笔记、标签…"
           className="w-full sm:w-64"
-          aria-label="Search library"
+          aria-label="搜索研究库"
         />
       </div>
 
+      {items && items.length > 0 && <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><label className="flex items-center gap-2"><input type="checkbox" checked={items.every((item) => selectedIds.includes(item.article.id))} onChange={(event) => setSelectedIds(event.target.checked ? items.map((item) => item.article.id) : [])} />选择当前结果</label><Button size="sm" variant="outline" onClick={() => { const chosen = items.filter((item) => selectedIds.includes(item.article.id)); const exportItems = chosen.length ? chosen : items; downloadMarkdown(exportMarkdown(exportItems.map((item) => ({ ...item.article, notes: item.notes, keyChange: item.keyChange }))), "signal-library.md"); }}>导出{items.some((item) => selectedIds.includes(item.article.id)) ? "所选" : "当前结果"}为 Markdown</Button></div>}
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {items === null ? (
@@ -306,13 +315,13 @@ export function SavedTab({
           description={
             q || status !== "all"
               ? "调整搜索或状态筛选后再试。"
-              : "在 Discover 页签中收藏新闻、论文、模型或 GitHub 项目。"
+              : "在每日简报、探索或研究页面点击收藏，即可加入研究库。"
           }
         />
       ) : (
         <div className="flex flex-col gap-2.5">
           {items.map((item) => (
-            <SavedItemCard key={item.article.id} item={item} collections={collections} onMutate={onMutate} />
+            <div key={item.article.id} className="space-y-1"><label className="inline-flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={selectedIds.includes(item.article.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, item.article.id] : current.filter((id) => id !== item.article.id))} />选择此条目</label><SavedItemCard item={item} collections={collections} onMutate={onMutate} /></div>
           ))}
         </div>
       )}

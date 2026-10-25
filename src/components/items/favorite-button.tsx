@@ -19,8 +19,8 @@ export function FavoriteButton({ id, className, size = "icon-sm" }: FavoriteButt
     <Button
       variant="ghost"
       size={size}
-      aria-label={active ? "Remove from favorites" : "Add to favorites"}
-      title={active ? "Remove from favorites" : "Add to favorites"}
+      aria-label={active ? "取消收藏" : "加入收藏"}
+      title={active ? "取消收藏" : "加入收藏"}
       onClick={(e) => {
         e.stopPropagation();
         toggleFavorite(id);

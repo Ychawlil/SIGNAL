@@ -1,12 +1,9 @@
 import "server-only";
 import { getDb } from "../db";
 import type { StoredArticle } from "../types";
-import { RULE_BASED_PLACEHOLDERS } from "./placeholders";
 import type {
   AnalysisResult,
   DailyBriefing,
-  ModelFamily,
-  ModelVersion,
 } from "./types";
 
 function parseJson<T>(value: string | null, fallback: T): T {
@@ -83,68 +80,9 @@ export function listUnanalyzedArticleIds(limit = 500): number[] {
   return rows.map((r) => Number(r.id));
 }
 
-/**
- * Analyses that need to be (re)generated for the briefing window.
- *
- * Two cases qualify:
- *  - `engine` is a concrete engine id that is not the one currently
- *    configured (e.g. rows written by the rule engine before an LLM key was
- *    added). `engine = ''` means a row predating the marker; those already
- *    hold real text and are deliberately left alone.
- *  - Any of the three briefing-facing fields is empty, so the page would
- *    otherwise have to render a placeholder.
- *
- * Scoped to `sinceIso` so a manual refresh only pays for the 24h window
- * instead of re-analyzing the whole archive.
- */
-export function listStaleAnalysisArticleIds(
-  sinceIso: string,
-  engineId: string,
-  limit = 40,
-): number[] {
-  const database = getDb();
-  const marks = RULE_BASED_PLACEHOLDERS.map(() => "?").join(",");
-  const rows = database
-    .prepare(
-      `SELECT an.article_id FROM analyses an
-       JOIN articles a ON a.id = an.article_id
-       WHERE a.published_at >= ?
-         AND (
-           (an.engine <> '' AND an.engine <> ?)
-           OR TRIM(an.impact) = ''
-           OR TRIM(an.limitations) = ''
-           OR TRIM(an.personal_relevance) = ''
-           OR an.impact IN (${marks})
-           OR an.limitations IN (${marks})
-           OR an.personal_relevance IN (${marks})
-         )
-       ORDER BY an.importance_score DESC, a.published_at DESC
-       LIMIT ?`,
-    )
-    .all(
-      sinceIso,
-      engineId,
-      ...RULE_BASED_PLACEHOLDERS,
-      ...RULE_BASED_PLACEHOLDERS,
-      ...RULE_BASED_PLACEHOLDERS,
-      limit,
-    ) as { article_id: number }[];
-  return rows.map((r) => Number(r.article_id));
-}
+export interface AnalyzedArticleRow extends StoredArticle { analysis: AnalysisResult; }
 
-export function countAnalyzed(): number {
-  const database = getDb();
-  const row = database
-    .prepare(`SELECT COUNT(*) AS c FROM analyses`)
-    .get() as { c: number };
-  return Number(row.c);
-}
-
-export interface AnalyzedArticleRow extends StoredArticle {
-  analysis: AnalysisResult;
-}
-
-export function listAnalyses(options: {
+export function listResearchRecords(options: {
   page: number;
   pageSize: number;
   minImportance?: number;
@@ -313,114 +251,6 @@ function rowToAnalyzedArticle(row: Record<string, unknown>): AnalyzedArticleRow 
 
 /* ============================================================
    Model versions
-   ============================================================ */
-
-export function saveModelVersion(model: ModelVersion): void {
-  const database = getDb();
-  database
-    .prepare(
-      `INSERT INTO model_versions (
-         family, name, version, source_article_id, reasoning, math, coding,
-         multimodal, agent, params, context_length, latency, cost, open_weights,
-         api_available, license, deployment, benchmarks, eval_note, claim_origin, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(family, version) DO UPDATE SET
-         name = excluded.name,
-         source_article_id = excluded.source_article_id,
-         params = COALESCE(excluded.params, model_versions.params),
-         open_weights = COALESCE(excluded.open_weights, model_versions.open_weights),
-         license = COALESCE(excluded.license, model_versions.license),
-         benchmarks = excluded.benchmarks,
-         eval_note = excluded.eval_note,
-         claim_origin = excluded.claim_origin,
-         updated_at = excluded.updated_at`,
-    )
-    .run(
-      model.family,
-      model.name,
-      model.version,
-      model.sourceArticleId,
-      model.reasoning,
-      model.math,
-      model.coding,
-      model.multimodal,
-      model.agent,
-      model.params,
-      model.contextLength,
-      model.latency,
-      model.cost,
-      model.openWeights === null ? null : model.openWeights ? 1 : 0,
-      model.apiAvailable === null ? null : model.apiAvailable ? 1 : 0,
-      model.license,
-      model.deployment,
-      JSON.stringify(model.benchmarks),
-      model.evalNote,
-      model.claimOrigin,
-      model.updatedAt,
-    );
-}
-
-export function listModelFamilies(): ModelFamily[] {
-  const database = getDb();
-  const rows = database
-    .prepare(
-      `SELECT * FROM model_versions ORDER BY family, updated_at DESC`,
-    )
-    .all() as Record<string, unknown>[];
-
-  const grouped = new Map<string, ModelVersion[]>();
-  for (const row of rows) {
-    const version: ModelVersion = {
-      family: String(row.family),
-      name: String(row.name),
-      version: row.version ? String(row.version) : null,
-      sourceArticleId: row.source_article_id ? Number(row.source_article_id) : null,
-      reasoning: row.reasoning ? String(row.reasoning) : null,
-      math: row.math ? String(row.math) : null,
-      coding: row.coding ? String(row.coding) : null,
-      multimodal: row.multimodal ? String(row.multimodal) : null,
-      agent: row.agent ? String(row.agent) : null,
-      params: row.params ? String(row.params) : null,
-      contextLength: row.context_length ? String(row.context_length) : null,
-      latency: row.latency ? String(row.latency) : null,
-      cost: row.cost ? String(row.cost) : null,
-      openWeights: row.open_weights === null ? null : Number(row.open_weights) === 1,
-      apiAvailable: row.api_available === null ? null : Number(row.api_available) === 1,
-      license: row.license ? String(row.license) : null,
-      deployment: row.deployment ? String(row.deployment) : null,
-      benchmarks: parseJson(String(row.benchmarks ?? "[]"), [] as string[]),
-      evalNote: String(row.eval_note),
-      claimOrigin: row.claim_origin as ModelVersion["claimOrigin"],
-      updatedAt: String(row.updated_at),
-    };
-    const list = grouped.get(version.family) ?? [];
-    list.push(version);
-    grouped.set(version.family, list);
-  }
-
-  return [...grouped.entries()].map(([family, versions]) => ({
-    family,
-    versions,
-    comparisonNote: buildComparisonNote(versions),
-  }));
-}
-
-function buildComparisonNote(versions: ModelVersion[]): string {
-  if (versions.length < 2) {
-    return "仅记录到一个版本，暂无版本间比较。";
-  }
-  const hasAnyCapability = versions.some(
-    (v) =>
-      v.reasoning || v.math || v.coding || v.multimodal || v.agent || v.params,
-  );
-  if (!hasAnyCapability) {
-    return "缺乏可直接比较的证据 — 未从来源中提取到可比较的能力分数、参数规模或上下文长度。";
-  }
-  return "已记录部分版本字段；能力分数的横向比较仍缺乏可直接比较的独立评测证据。";
-}
-
-/* ============================================================
-   Briefings
    ============================================================ */
 
 export function saveBriefing(

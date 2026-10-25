@@ -22,10 +22,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       (body as { error?: string }).error ?? `Request failed (${response.status})`,
     );
   }
-  return response.json() as Promise<T>;
+  const data = await response.json() as T;
+  if (init?.method && init.method !== "GET") window.dispatchEvent(new Event("signal-library-changed"));
+  return data;
 }
 
 export const libraryApi = {
+  migrate: (library: import("@/lib/types").LibraryState) => request<{ ok: boolean; migrated: number }>("/api/library/migrate", { method: "POST", body: JSON.stringify(library) }),
   list: (filters: { q?: string; status?: SaveStatus | "all" }) =>
     request<{ items: SavedItemView[]; total: number }>(
       `/api/library?status=${filters.status ?? "all"}&q=${encodeURIComponent(filters.q ?? "")}`,

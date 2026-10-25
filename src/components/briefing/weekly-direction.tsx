@@ -5,7 +5,7 @@ import { SectionHeading } from "./section-heading";
 export function WeeklyDirection({ items }: { items: WeeklyDirectionItem[] }) {
   return (
     <section>
-      <SectionHeading index="F" label="Direction" title="Weekly Direction" />
+      <SectionHeading index="F" label="方向" title="每周方向" />
       {items.length === 0 ? (
         <p className="rounded-lg border border-border bg-panel p-5 text-sm text-muted-foreground">
           —
@@ -26,7 +26,7 @@ export function WeeklyDirection({ items }: { items: WeeklyDirectionItem[] }) {
                 </p>
                 <div className="mt-4 border-t border-border pt-3">
                   <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                    Open questions
+                    待验证问题
                   </p>
                   <ul className="mt-1.5 flex flex-col gap-1.5">
                     {item.openQuestions.map((q) => (

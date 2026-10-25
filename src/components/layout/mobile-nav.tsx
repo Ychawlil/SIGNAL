@@ -21,7 +21,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           <NavLinks onNavigate={onClose} />
         </div>
         <div className="flex items-center justify-between border-t border-border px-5 py-4">
-          <span className="text-xs text-muted-foreground">Theme</span>
+          <span className="text-xs text-muted-foreground">主题外观</span>
           <ThemeToggle />
         </div>
       </div>

@@ -1,6 +1,14 @@
-# SIGNAL
+# SIGNAL Universe
 
-### AI & Frontier Technology Intelligence Hub
+### An Information Universe
+
+首页为原创低多边形太阳系：太阳是每日简报入口，六颗公转并自转的星球分别对应 AI 前沿、研究、开源、社区、科学和研究库。公转速度随轨道半径增大而降低。背景为三维空间中的程序化银河、暗尘带和分层星点，随视角旋转、缩放产生自然变化。点击后镜头飞向星球真实轨道，在同一场景内阅读；所选星球在左侧露出右半球，太阳居于可见背景中央，镜头随公转追踪。返回全景才能切换板块；支持暂停、键盘、减少动态效果和无 WebGL 普通导航。独立分析页面、接口与全库分析任务已删除，简报摘要和重要性评分所需的共用计算保留。
+
+![SIGNAL Universe](screenshots/spacecraft-overview.png)
+
+全景中的低多边形飞船已放大为原来的两倍，体长约为社区星球直径的三分之二。初始绕 AI 前沿飞行，选择星球后自动飞往该星球并绕行；返回全景时继续围绕上次选择的星球。飞船不再提供控制入口、手动驾驶或模式切换。场景暂停和减少动态效果也会暂停飞船。
+
+实现、路由映射、清理与验证记录见 [UNIVERSE-AUDIT.md](docs/UNIVERSE-AUDIT.md)。
 
 **Discover what matters. Understand what changes. Track what comes next.**
 
@@ -38,9 +46,8 @@ It goes beyond headlines to help you understand **what changed, why it matters, 
 | GitHub trend tracking | Available |
 | Scheduled ingestion & analysis | Available |
 | Search and research exploration | Available |
-| Model version comparison | In progress |
 
-All primary pages — Daily Briefing, Explore, Research, Topics, Analysis, Trends, and
+All primary pages — Daily Briefing, Explore, Research, Topics, Trends, and
 Library — render real records collected from the connected sources. No sample or
 placeholder content is served in production.
 
@@ -51,8 +58,7 @@ placeholder content is served in production.
 | Focus-area weights | Stored server-side (`focus_weights`) and used by the importance calculation |
 | Daily signal count | Passed to `/api/briefing?count=` and caps the number of briefing items |
 | Default sorting | Used as the initial Explore sort order until you change it in the view |
-| Theme | Light/dark, stored per browser |
-| Sidebar | Collapsed/expanded state, stored per browser; the content re-centres when collapsed |
+| Theme | Unified dark interface |
 
 Preferences other than focus-area weights live in `localStorage` because SIGNAL has no
 account system yet.
@@ -77,7 +83,7 @@ SIGNAL collects, analyzes, and organizes technology intelligence into a searchab
 
 Every stored article gets a free deterministic baseline analysis on ingest, so Explore,
 Research and Topics stay complete while the paid analysis is reserved for the briefing.
-The Analysis page has a separate opt-in action that analyzes the whole archive.
+The standalone Analysis page and full-archive analysis action have been removed.
 
 Original sources remain accessible. Official claims, preprints, peer-reviewed research, and independent verification are treated as distinct forms of evidence.
 
@@ -139,6 +145,7 @@ npm run start      # Production server
 npm run lint       # Lint checks
 npm run typecheck  # TypeScript checks
 npm test           # Unit tests
+npm run test:e2e   # Browser tests; run build first, requires installed Chrome
 ```
 
 ## ✦ Configuration
@@ -170,7 +177,6 @@ See `.env.example` and [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for additional con
 
 - [x] Validate DeepSeek-powered analysis end to end (why it matters, limitations, personal relevance)
 - [x] Select the briefing before analyzing; analyze only selected items that lack one
-- [ ] Re-analyze the whole archive with the LLM (opt-in action on the Analysis page)
 - [ ] Improve model-version and capability comparisons
 - [ ] Build reliable multi-day trend measurements
 - [ ] Add researcher/community signal tracking beyond arXiv

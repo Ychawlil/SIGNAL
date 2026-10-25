@@ -34,7 +34,7 @@ vi.mock("@/lib/server/analysis/analyzer", async (importOriginal) => {
         impact: `Impact for ${article.id}.`,
         personalRelevance: `Relevance for ${article.id}.`,
         // Deterministic, article-specific importance so selection is stable.
-        importanceScore: 60 + (article.id % 30),
+        importanceScore: base.importanceScore,
         analyzedAt: new Date().toISOString(),
       };
     },
@@ -48,7 +48,7 @@ function article(index: number): RawArticle {
     provider: "rss",
     externalId: `pipeline:${index}`,
     title: `Pipeline signal ${index}`,
-    summary: "Summary text.",
+    summary: "We propose an algorithm and compare it with a baseline in controlled experiments. Code and documentation are available at https://github.com/test/project.",
     url: `https://example.com/pipeline/${index}`,
     sourceName: "Test feed",
     category: index % 2 === 0 ? "ai-models" : "physical-ai",
@@ -172,7 +172,7 @@ describe("briefing-first analysis pipeline", () => {
       provider: "rss" as const,
       externalId: `pipeline:${downgraded}`,
       title: `Pipeline signal ${downgraded}`,
-      summary: "Summary text.",
+      summary: "We propose an algorithm and compare it with a baseline in controlled experiments. Code and documentation are available at https://github.com/test/project.",
       url: `https://example.com/pipeline/${downgraded}`,
       sourceName: "Test feed",
       category: "ai-models" as const,

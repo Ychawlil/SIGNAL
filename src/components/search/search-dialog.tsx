@@ -6,17 +6,16 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useModal } from "@/lib/use-modal";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { CATEGORY_MAP } from "@/lib/constants";
 import { toIntelligenceItem, type SignalRecord } from "@/lib/signals";
 import type { IntelligenceItem } from "@/lib/types";
 import { TimeAgo } from "@/components/live-time";
-import { ImportanceMeter } from "@/components/items/meta";
 import { EmptyState } from "@/components/ui/empty-state";
 
 interface SearchContextValue {
@@ -61,12 +60,13 @@ function SearchDialog({
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<IntelligenceItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const onQueryChange = (value: string) => {
     setQuery(value);
+    setError(null);
     if (!value.trim()) {
       setResults([]);
       setLoading(false);
@@ -78,41 +78,29 @@ function SearchDialog({
   // Debounced search against the real intelligence database.
   useEffect(() => {
     const q = query.trim();
-    if (!q) return;
+    if (!q || !open) return;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
       fetch(`/api/signals?pageSize=8&q=${encodeURIComponent(q)}`, {
         cache: "no-store",
+        signal: controller.signal,
       })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((data: { items: SignalRecord[] }) => {
-          setResults(data.items.map(toIntelligenceItem));
+          if (!controller.signal.aborted) setResults(data.items.map(toIntelligenceItem));
         })
-        .catch(() => setResults([]))
-        .finally(() => setLoading(false));
+        .catch(() => { if (!controller.signal.aborted) { setError("搜索失败，请重试或前往探索页面。"); setResults([]); } })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 220);
-    return () => clearTimeout(timer);
-  }, [query]);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [query, open]);
 
   const handleClose = useCallback(() => {
     setQuery("");
     onClose();
   }, [onClose]);
 
-  useEffect(() => {
-    if (open) {
-      const t = setTimeout(() => inputRef.current?.focus(), 0);
-      return () => clearTimeout(t);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, handleClose]);
+  const modalRef = useModal(open, handleClose);
 
   if (!open) return null;
 
@@ -124,9 +112,9 @@ function SearchDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
+    <div ref={modalRef} tabIndex={-1} className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="搜索情报">
       <button
-        aria-label="Close search"
+        aria-label="关闭搜索"
         onClick={handleClose}
         className="absolute inset-0 cursor-default bg-overlay/80 backdrop-blur-[1px]"
       />
@@ -134,7 +122,6 @@ function SearchDialog({
         <div className="flex items-center gap-2 border-b border-border px-4">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
-            ref={inputRef}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             onKeyDown={(e) => {
@@ -155,12 +142,12 @@ function SearchDialog({
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
               检索中…
             </p>
-          ) : results.length === 0 ? (
+          ) : error ? (<p role="alert" className="p-4 text-danger">{error}</p>) : results.length === 0 ? (
             <div className="p-2">
               <EmptyState
                 icon={<Search />}
                 title="没有匹配的结果"
-                description="尝试更短的关键词，或直接前往 Explore 使用完整筛选。"
+                description="尝试更短的关键词，或直接前往探索 使用完整筛选。"
               />
             </div>
           ) : (
@@ -170,7 +157,7 @@ function SearchDialog({
                   <button
                     onClick={() => {
                       router.push(`/explore?open=${item.id}`);
-                      onClose();
+                      handleClose();
                     }}
                     className="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-panel-secondary"
                   >
@@ -181,7 +168,7 @@ function SearchDialog({
                       <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                         <span>{CATEGORY_MAP[item.category]?.shortLabel}</span>
                         <TimeAgo iso={item.publishedAt} />
-                        <ImportanceMeter score={item.importanceScore} />
+                        <span className="font-mono text-xs">重要性 {item.importanceScore}</span>
                       </div>
                     </div>
                     <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-accent" />
@@ -193,12 +180,12 @@ function SearchDialog({
         </div>
 
         <div className="flex items-center justify-between border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-          <span>Enter 前往 Explore 查看全部结果</span>
+          <span>按 Enter 前往探索查看全部结果</span>
           <button
             onClick={goToExplore}
             className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
           >
-            All results <ArrowRight className="h-3 w-3" />
+            全部结果 <ArrowRight className="h-3 w-3" />
           </button>
         </div>
       </div>

@@ -77,13 +77,13 @@ export default function TopicsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
+      <header className="page-header flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-accent">
-            Tracking
+            追踪
           </p>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
-            Topics
+            主题
           </h1>
         </div>
         <button
@@ -95,7 +95,7 @@ export default function TopicsPage() {
               : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
           )}
         >
-          Following only
+          仅看已关注
           <span className="font-mono tabular-nums">
             {hydrated ? TOPICS.filter((t) => isSubscribed(t.id)).length : null}
           </span>
@@ -107,13 +107,13 @@ export default function TopicsPage() {
           <p className="text-sm text-danger">加载失败：{error}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Retry
+            重试
           </Button>
         </div>
       )}
 
       {!error && topics.length === 0 ? (
-        <EmptyState icon={<Layers />} title="You are not following any topic" />
+        <EmptyState icon={<Layers />} title="你尚未关注任何主题" />
       ) : (
         <div className="grid gap-2.5 lg:grid-cols-2">
           {topics.map((topic) => {
@@ -149,10 +149,10 @@ export default function TopicsPage() {
                     <Switch
                       checked={subscribed}
                       onCheckedChange={() => toggleSubscribed(topic.id)}
-                      label={`Follow ${topic.name}`}
+                      label={`关注 ${topic.name}`}
                     />
                     <span className="text-[11px] text-muted-foreground">
-                      {subscribed ? "Following" : "Not following"}
+                      {subscribed ? "已关注" : "未关注"}
                     </span>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export default function TopicsPage() {
                   </div>
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                      Key developments
+                      重要进展
                     </p>
                     {developments.length === 0 ? (
                       <p className="mt-1.5 text-xs leading-5 text-muted-foreground">—</p>

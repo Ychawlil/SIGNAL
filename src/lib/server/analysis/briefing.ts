@@ -245,19 +245,19 @@ const CATEGORY_LABELS: Record<string, string> = {
 /** Which tracked topic each category feeds (mirrors lib/topics). */
 const CATEGORY_TOPICS: Record<string, { id: string; label: string }[]> = {
   "ai-models": [
-    { id: "llm-reasoning", label: "LLM Reasoning" },
-    { id: "ai-agents", label: "AI Agents" },
+    { id: "llm-reasoning", label: "大模型推理" },
+    { id: "ai-agents", label: "AI 智能体" },
   ],
   // World Models belongs to the embodied area, so it is no longer a separate chip.
-  "ai-research": [{ id: "llm-reasoning", label: "LLM Reasoning" }],
-  "ai-math": [{ id: "ai-math", label: "AI for Mathematics" }],
-  "ai-cs": [{ id: "ai-systems", label: "AI for Systems" }],
+  "ai-research": [{ id: "llm-reasoning", label: "大模型推理" }],
+  "ai-math": [{ id: "ai-math", label: "AI 数学" }],
+  "ai-cs": [{ id: "ai-systems", label: "AI 系统" }],
   // Embodied AI is reported as one area: VLA / Robot Learning / World Models
   // are facets of the same category, so splitting them only inflated counts.
   "physical-ai": [],
-  "agents-coding": [{ id: "ai-agents", label: "AI Agents" }, { id: "ai-coding", label: "AI Coding" }],
-  "open-source": [{ id: "ai-coding", label: "AI Coding" }],
-  signals: [{ id: "ai-agents", label: "AI Agents" }],
+  "agents-coding": [{ id: "ai-agents", label: "AI 智能体" }, { id: "ai-coding", label: "AI 编程" }],
+  "open-source": [{ id: "ai-coding", label: "AI 编程" }],
+  signals: [{ id: "ai-agents", label: "AI 智能体" }],
   "other-science": [],
 };
 
@@ -330,4 +330,8 @@ function buildDigest(sections: BriefingSection[], count: number): string {
     );
   }
 
-  return joinSentences(sentences);}
+  return joinSentences(sentences);
+
+
+
+}

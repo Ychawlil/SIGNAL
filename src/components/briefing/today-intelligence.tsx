@@ -37,12 +37,12 @@ function Stat({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-md border border-border bg-panel-secondary px-4 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
+    <div className="editorial-stat px-4 py-4 sm:px-5">
+      <p className="text-xs font-medium tracking-wide text-muted-accent">
         {label}
       </p>
       <p
-        className={`mt-1 font-mono text-2xl font-semibold tabular-nums ${
+        className={`mt-2 font-mono text-3xl font-semibold tabular-nums ${
           accent ? "text-accent" : "text-foreground"
         }`}
       >
@@ -69,14 +69,16 @@ export function TodayIntelligence({
 }: TodayIntelligenceProps) {
   return (
     <section>
-      <SectionHeading index="A" label="Overview" title="Today's Intelligence" />
+      <SectionHeading index="A" label="概览" title="今日情报" />
       <Card>
-        <CardContent className="p-5">
+        <CardContent className="p-5 sm:p-7">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-              Digest
+            <p className="text-xs font-medium tracking-wide text-muted-accent">
+              今日重点
             </p>
-            <p className="mt-1.5 text-[15px] leading-7 text-foreground">{digest}</p>
+            <ul className="mt-2 space-y-2 text-[15px] leading-7 text-foreground">
+              {digest.split(/(?:\n+|；)/).map((line) => line.trim()).filter(Boolean).map((line, index) => <li key={index} className="flex gap-3"><span aria-hidden className="text-accent">•</span><span>{line}</span></li>)}
+            </ul>
             {reduced && (
               <p className="mt-2 text-xs leading-5 text-warning">
                 高质量情报不足，已按实际数量减少精选。
@@ -84,17 +86,17 @@ export function TodayIntelligence({
             )}
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat label="精选条数" value={selectedCount} suffix="signals" accent />
-            <Stat label="24h 新增" value={freshCount} suffix="signals" />
-            <Stat label="24h 窗口" value={windowCount} suffix="stored" />
-            <Stat label="库内总量" value={totalCount} suffix="stored" />
+          <div className="mt-6 grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-panel-secondary/40 sm:grid-cols-4">
+            <Stat label="精选条数" value={selectedCount} suffix="条" accent />
+            <Stat label="24h 采集入库" value={freshCount} suffix="条" />
+            <Stat label="24h 内发布" value={windowCount} suffix="条" />
+            <Stat label="库内总量" value={totalCount} suffix="条" />
           </div>
 
           <div className="mt-6 border-t border-border pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-accent">
-                Key themes
+              <p className="text-xs font-medium tracking-wide text-muted-accent">
+                重点主题
               </p>
               <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                 {sourceMix.length === 0

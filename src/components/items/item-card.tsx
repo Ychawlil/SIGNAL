@@ -22,12 +22,13 @@ export function ItemCard({ item, onOpen }: ItemCardProps) {
       tabIndex={0}
       onClick={() => onOpen(item)}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onOpen(item);
         }
       }}
-      className="group flex cursor-pointer flex-col rounded-lg border border-border bg-panel p-4 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+      className="editorial-item-card group flex cursor-pointer flex-col rounded-2xl border border-border bg-panel p-5 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -38,7 +39,7 @@ export function ItemCard({ item, onOpen }: ItemCardProps) {
 
       <h3
         className={cn(
-          "text-sm font-semibold leading-6 text-foreground",
+          "text-[15px] font-semibold leading-7 text-foreground",
           read && "text-muted-foreground",
         )}
       >
@@ -48,14 +49,14 @@ export function ItemCard({ item, onOpen }: ItemCardProps) {
         {item.summary}
       </p>
 
-      <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+      <div className="mb-4 mt-4 flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span className="truncate">
           {item.sourceName} · <TimeAgo iso={item.publishedAt} />
         </span>
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-        <ImportanceMeter score={item.importanceScore} />
+      <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
+        <ImportanceMeter articleId={item.id} score={item.importanceScore} />
       </div>
     </article>
   );
